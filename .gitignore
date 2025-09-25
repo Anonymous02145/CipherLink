@@ -1,23 +1,23 @@
-# Prerequisites
+
 *.d
 
-# Compiled Object files
+
 *.slo
 *.lo
 *.o
 *.obj
 
-# Precompiled Headers
+
 *.gch
 *.pch
 
-# Linker files
+ Linker files
 *.ilk
 
-# Debugger Files
+  Debugger Files
 *.pdb
 
-# Compiled Dynamic libraries
+ . Compiled Dynamic libraries
 *.so
 *.dylib
 *.dll
