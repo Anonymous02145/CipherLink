@@ -1,0 +1,11 @@
+CompileFlags:
+  Add: 
+    - -I/usr/include/qt6
+    - -I/usr/include/qt6/QtCore
+    - -I/usr/include/qt6/QtGui
+    - -I/usr/include/qt6/QtWidgets
+    - -DQT_WIDGETS_LIB
+    - -DQT_GUI_LIB
+    - -DQT_CORE_LIB
+    - -std=c++17
+  CompilationDatabase: compile_commands.json

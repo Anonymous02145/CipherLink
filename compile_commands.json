@@ -1,0 +1,7 @@
+[
+    {
+        "directory": "/home/fsociety/IITB",
+        "command": "clang++ -I/usr/include/qt6/QtWidgets -I/usr/include/qt6 -DQT_WIDGETS_LIB -I/usr/include/qt6/QtGui -DQT_GUI_LIB -I/usr/include/qt6/QtCore -DQT_CORE_LIB -I/usr/lib64/qt6/mkspecs/linux-g++ even_or_odd.cpp -o check -lQt6Widgets -lQt6Gui -lQt6Core",
+        "file": "even_or_odd.cpp"
+    }
+]

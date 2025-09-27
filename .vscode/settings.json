@@ -1,3 +1,4 @@
 {
-    "CodeGPT.apiKey": "Ollama"
+    "CodeGPT.apiKey": "Ollama",
+    "cmake.sourceDirectory": "/home/fsociety/CipherLink/UI"
 }

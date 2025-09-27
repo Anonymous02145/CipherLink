@@ -9,14 +9,18 @@ def watcher():
         
         
     while True:
+        modes = ["Public", "User", "Anonymous"]
         time.sleep(10)
         try:
             with open("settings/settings.json", "r") as _file:
                 _current = json.load(_file)
             
             if _current != _last:
-                print("File has been changed")
-                break
+                for i in range(len(modes)):
+                    if _current["Status"] == modes[i]:
+                        print(f"[*] Mode changed to {modes[i]}")
+                        _last = _current
+                        break
             
         except FileExistsError as f:
             print(f)
