@@ -1,4 +1,4 @@
-from include import *
+from .include import *
 
 class BidirectionalChatInterface:
     def __init__(self, client):

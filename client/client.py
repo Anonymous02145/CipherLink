@@ -1,11 +1,11 @@
-from include import *
-from encryption import *
-from file_transfer import *
-import protocols
-from validation import *
-from traffic_manager import *
-from logger import *
-from chat_interface import *
+from .include import *
+from .encryption import *
+from .file_transfer import *
+from .protocols import *
+from .validation import *
+from .traffic_manager import *
+from .logger import *
+from .chat_interface import *
 
 class AnonymousClient:
     def __init__(self, username=None):
@@ -794,7 +794,7 @@ class AnonymousClient:
         except Exception as e:
             print(f"[-] Key verification failed: {e}")
             return False
-        
+
     def get_self_ip(self):
         for i in range(len(URL_IP)):
             _var = requests.get(URL_IP[i])
@@ -802,7 +802,7 @@ class AnonymousClient:
                 return _var.text
             else:
                 continue
-         
+
     def request_connection(self, target_identity_hash: str) -> Optional[Dict]:
         try:
             if not self.ensure_valid_session():

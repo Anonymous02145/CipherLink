@@ -1,4 +1,4 @@
-from include import *
+from .include import *
 
 class AnonymousTrafficManager:
     def __init__(self):

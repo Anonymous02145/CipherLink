@@ -12,7 +12,7 @@ import hashlib
 app = Flask(__name__)
 
 
-MAX_REQUESTS_PER_MINUTE = 50  
+MAX_REQUESTS_PER_MINUTE = 50
 REQUEST_TIMEOUT = 120
 CLEANUP_INTERVAL = 30
 
@@ -148,13 +148,13 @@ def log_connection_attempt(initiator_hash, target_hash, success=False, error_msg
         conn.commit()
         conn.close()
     except:
-        pass  
+        pass
 
 
 
 connection_requests = {}
-user_listening_ports = {}  
-user_connection_counts = {}  
+user_listening_ports = {}
+user_connection_counts = {}
 
 LOCK = threading.Lock()
 
@@ -165,14 +165,14 @@ def cleanup_ephemeral_data():
         now = time.time()
 
         with LOCK:
-           
+
             expired_requests = [
                 k for k, v in connection_requests.items() if now - v["timestamp"] > 300
             ]
             for k in expired_requests:
                 del connection_requests[k]
 
-            
+
             expired_ports = [
                 k for k, v in user_listening_ports.items() if now - v["timestamp"] > 300
             ]
@@ -404,7 +404,7 @@ def request_connection():
                 )
                 return jsonify({"error": "Target user not found"}), 404
 
-            
+
             if target_hash not in user_listening_ports:
                 log_connection_attempt(
                     initiator_hash, target_hash, False, "Target user offline"
@@ -413,7 +413,7 @@ def request_connection():
 
             target_port = user_listening_ports[target_hash]["port"]
 
-            
+
             user_connection_counts[initiator_hash] = (
                 user_connection_counts.get(initiator_hash, 0) + 1
             )
@@ -421,7 +421,7 @@ def request_connection():
                 user_connection_counts.get(target_hash, 0) + 1
             )
 
-            
+
             connection_info = {
                 "status": "connection_ready",
                 "initiator_peer_id": initiator["peer_id"],

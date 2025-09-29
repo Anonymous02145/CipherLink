@@ -1,4 +1,4 @@
-from include import *
+from .include import *
 
 class FileTransferProtocol:
     def __init__(self):

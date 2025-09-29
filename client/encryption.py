@@ -1,4 +1,4 @@
-from include import *
+from .include import *
 
 class E2EEncryptionEngine:
     def __init__(self):

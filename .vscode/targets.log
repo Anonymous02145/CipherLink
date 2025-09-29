@@ -8,7 +8,7 @@ make: *** No rule to make target 'all'.  Stop.
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
 
-# Make data base, printed on Sat Sep 27 11:51:35 2025
+# Make data base, printed on Thu Sep  4 05:49:24 2025
 
 # Variables
 
@@ -57,12 +57,11 @@ VSCODE_CODE_CACHE_PATH = /home/fsociety/.config/Code/CachedData/e3a5acfb517a4432
 # environment
 LANG = C
 # environment
-XAUTHORITY = /run/user/1000/.mutter-Xwaylandauth.7G9ND3
+XAUTHORITY = /run/user/1000/.mutter-Xwaylandauth.T3BDC3
 # default
 .LOADED := 
 # default
 .INCLUDE_DIRS := /usr/local/include /usr/include
- 
 # environment
 MEMORY_PRESSURE_WATCH = /sys/fs/cgroup/user.slice/user-1000.slice/user@1000.service/session.slice/org.gnome.Shell@wayland.service/memory.pressure
 # makefile
@@ -83,6 +82,7 @@ MFLAGS = -pqrR
 SSH_AUTH_SOCK = /run/user/1000/keyring/ssh
 # default
 .SHELLFLAGS := -c
+ 
 # environment
 WAYLAND_DISPLAY = wayland-0
 # environment
@@ -98,13 +98,13 @@ MAKEFILE_LIST :=
 # automatic
 @F = $(notdir $@)
 # environment
-VSCODE_PID = 2725
+VSCODE_PID = 2890
 # environment
 XDG_SESSION_TYPE = wayland
 # automatic
 ?D = $(patsubst %/,%,$(dir $?))
 # environment
-SESSION_MANAGER = local/unix:@/tmp/.ICE-unix/1897,unix/unix:/tmp/.ICE-unix/1897
+SESSION_MANAGER = local/unix:@/tmp/.ICE-unix/1871,unix/unix:/tmp/.ICE-unix/1871
 # automatic
 *F = $(notdir $*)
 # environment
@@ -142,7 +142,7 @@ MAKEFILES :=
 # environment
 DEBUGINFOD_IMA_CERT_PATH = /etc/keys/ima:
 # environment
-INVOCATION_ID = 3d666dcc20cf463bbaf22af68918e183
+INVOCATION_ID = b8f7b5f5e23e4e2f9c5d765c16e7bae3
 # environment
 USERNAME = fsociety
 # environment
@@ -166,7 +166,8 @@ GIO_LAUNCHED_DESKTOP_FILE = /usr/share/applications/code.desktop
 # makefile
 .DEFAULT_GOAL := 
 # environment
-SYSTEMD_EXEC_PID = 1966
+SYSTEMD_EXEC_PID = 1941
+ 
 # environment
 HISTCONTROL = ignoredups
 # environment
@@ -178,11 +179,11 @@ USER = fsociety
 # default
 MAKE_VERSION := 4.4.1
 # environment
-MANAGERPID = 1779
+MANAGERPID = 1753
 # environment
 DEBUGINFOD_URLS = https://debuginfod.fedoraproject.org/ 
 # environment
-GIO_LAUNCHED_DESKTOP_FILE_PID = 2725
+GIO_LAUNCHED_DESKTOP_FILE_PID = 2890
 # environment
 Qt6_LIBS = -lQt6Concurrent -lQt6DBus -lQt6Network -lQt6OpenGLWidgets -lQt6OpenGL -lQt6PrintSupport -lQt6Widgets -lQt6Gui -lQt6Core
 # environment
@@ -190,7 +191,7 @@ _ = /usr/bin/make
 # environment
 XDG_RUNTIME_DIR = /run/user/1000
 # environment
-JOURNAL_STREAM = 9:20486
+JOURNAL_STREAM = 9:18911
 # environment
 XDG_SESSION_CLASS = user
 # environment
@@ -233,7 +234,6 @@ GDMSESSION = gnome
 # No implicit rules.
 
 # Files
- 
 
 # Not a target:
 Makefile:
@@ -283,6 +283,6 @@ GNUmakefile:
 # strcache performance: lookups = 24 / hit rate = 8%
 # hash-table stats:
 # Load=22/8192=0%, Rehash=0, Collisions=0/24=0%
-# Finished Make data base on Sat Sep 27 11:51:35 2025
+# Finished Make data base on Thu Sep  4 05:49:24 2025
 
  

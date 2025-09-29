@@ -1,5 +1,5 @@
-from encryption import *
-from traffic_manager import *
+from .encryption import *
+from .traffic_manager import *
 
 class SecureMessageProtocol:
     processed_msg_ids = set()

@@ -1,37 +1,67 @@
-from client import AnonymousClient
-from include import *
+from .client import AnonymousClient
+from .include import *
 import json
 import time
+import os
+import sys
+import signal
 
-def watcher():
-    with open("settings/settings.json", "r") as _file:
-        _last = json.load(_file)
-        
-        
-    while True:
-        modes = ["Public", "User", "Anonymous"]
-        time.sleep(10)
+def load_settings():
+    """Load settings without blocking"""
+    module_dir = os.path.dirname(os.path.abspath(__file__))
+    settings_path = os.path.join(module_dir, "settings", "settings.json")
+
+    # Create settings directory and default file if they don't exist
+    settings_dir = os.path.join(module_dir, "settings")
+    if not os.path.exists(settings_dir):
+        os.makedirs(settings_dir)
+
+    if not os.path.exists(settings_path):
+        default_settings = {"Status": "Public"}
+        with open(settings_path, "w") as f:
+            json.dump(default_settings, f, indent=2)
+        return "Public"
+
+    try:
+        with open(settings_path, "r") as f:
+            settings = json.load(f)
+        return settings.get("Status", "Public")
+    except Exception as e:
+        print(f"[-] Error loading settings: {e}")
+        return "Public"
+
+
+def start_watcher_thread():
+    """Start settings watcher in background thread (for future use)"""
+    def watcher():
+        module_dir = os.path.dirname(os.path.abspath(__file__))
+        settings_path = os.path.join(module_dir, "settings", "settings.json")
+
         try:
-            with open("settings/settings.json", "r") as _file:
-                _current = json.load(_file)
-            
-            if _current != _last:
-                for i in range(len(modes)):
-                    if _current["Status"] == modes[i]:
-                        print(f"[*] Mode changed to {modes[i]}")
-                        _last = _current
-                        break
-            
-        except FileExistsError as f:
-            print(f)
-            break
-        
-        except FileNotFoundError as _f:
-            print("Settings Not found")
-            break
+            with open(settings_path, "r") as f:
+                last = json.load(f)
+        except:
+            last = {"Status": "Public"}
+
+        while True:
+            time.sleep(10)
+            try:
+                with open(settings_path, "r") as f:
+                    current = json.load(f)
+
+                if current != last:
+                    print(f"[*] Mode changed to {current.get('Status', 'Public')}")
+                    last = current
+                    # TODO: Notify UI or trigger mode change
+            except Exception:
+                pass
+
+    import threading
+    thread = threading.Thread(target=watcher, daemon=True)
+    thread.start()
+
 
 def main():
-    
     print("-" * 60)
 
     username = input(
@@ -142,14 +172,35 @@ def main():
         pass
     finally:
         client.shutdown()
-        
-if __name__ == "__main__":
-    
-    def signal_handler(signum, frame):
-        sys.exit(0)
 
+
+def signal_handler(signum, frame):
+    print("\n[+] Shutting down gracefully...")
+    sys.exit(0)
+
+
+if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
 
-    main()
+    print("[+] Starting CipherLink client...")
+    print("[+] Checking configuration...")
 
+    # Load settings without blocking
+    current_mode = load_settings()
+    print(f"[+] Mode: {current_mode}")
+
+    # Start background watcher (optional)
+    # start_watcher_thread()
+
+    # Start the client
+    if current_mode == "Public":
+        print("[+] Running in Public mode")
+        main()
+    elif current_mode == "User":
+        print("[!] User mode not yet implemented")
+    elif current_mode == "Anonymous":
+        print("[!] Anonymous mode not yet implemented")
+    else:
+        print(f"[-] Unknown mode: {current_mode}, defaulting to Public")
+        main()
