@@ -29,6 +29,7 @@ URL_GET_KEY = f"{URL_BASE}/get_key"
 URL_SET_PORT = f"{URL_BASE}/set_listening_port"
 URL_REQUEST_CONNECTION = f"{URL_BASE}/request_connection"
 URL_DISCOVER_ONLINE = f"{URL_BASE}/discover_online"
+URL_CHECK_FOR_CONNECTION = f"{URL_BASE}/check_for_connection"
 
 MESSAGE_PADDING_SIZE = 256
 SESSION_ROTATION_HOURS = 24

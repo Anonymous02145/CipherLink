@@ -41,7 +41,7 @@ class AnonymousClient:
         self.encryption_engine = E2EEncryptionEngine()
         self.connection_validator = ConnectionValidator()
         self.traffic_manager = AnonymousTrafficManager()
-        self.secure_protocol = protocols.SecureMessageProtocol()
+        self.secure_protocol = SecureMessageProtocol()
 
         self.current_chat_peer = None
         self.ui_lock = threading.Lock()
@@ -510,27 +510,48 @@ class AnonymousClient:
         try:
             client_sock.settimeout(15)
 
-            initiator_key = client_sock.recv(32)
-            if len(initiator_key) != 32:
-                print("[-] Failed to receive initiator public key")
-                return
+            # Receive initiator's public key with better error handling
+            initiator_key = b""
+            while len(initiator_key) < 32:
+                chunk = client_sock.recv(32 - len(initiator_key))
+                if not chunk:
+                    print("[-] Failed to receive complete initiator public key")
+                    return
+                initiator_key += chunk
 
+            # Send our public key
             client_sock.send(self.public_key_bytes)
 
-            username_length_data = client_sock.recv(4)
-            if len(username_length_data) < 4:
-                print("[-] Failed to receive username length")
-                return
+            # Receive username length and username
+            username_length_data = b""
+            while len(username_length_data) < 4:
+                chunk = client_sock.recv(4 - len(username_length_data))
+                if not chunk:
+                    print("[-] Failed to receive username length")
+                    return
+                username_length_data += chunk
+
             username_length = struct.unpack(">I", username_length_data)[0]
             if username_length > 100:
                 print("[-] Username too long")
                 return
-            peer_username = client_sock.recv(username_length).decode()
 
+            peer_username_data = b""
+            while len(peer_username_data) < username_length:
+                chunk = client_sock.recv(username_length - len(peer_username_data))
+                if not chunk:
+                    print("[-] Failed to receive complete username")
+                    return
+                peer_username_data += chunk
+
+            peer_username = peer_username_data.decode()
+
+            # Send our username
             username_bytes = self.username.encode()
             client_sock.send(struct.pack(">I", len(username_bytes)))
             client_sock.send(username_bytes)
 
+            # Generate peer ID and verify
             digest = hashes.Hash(hashes.SHA256())
             digest.update(initiator_key.hex().encode())
             peer_id = digest.finalize().hex()
@@ -547,9 +568,7 @@ class AnonymousClient:
                 return
 
             connection_id = f"recv_{peer_username}"
-            print(
-                f"[+] Establishing connection {connection_id} with shared key {shared_secret.hex()[:16]}..."
-            )
+            print(f"[+] Establishing connection {connection_id} with shared key {shared_secret.hex()[:16]}...")
 
             with self.lock:
                 self.active_connections[connection_id] = {
@@ -859,24 +878,33 @@ class AnonymousClient:
             if response.status_code == 200:
                 online_users = response.json().get("online_users", [])
 
+                print(f"[+] Found {len(online_users)} online peers:")
+                for i, user in enumerate(online_users, 1):
+                    peer_id = user["peer_id"]
+                    username_hash = user.get("username_hash", "Unknown")
+                    print(f"  {i}. User_{peer_id[:8]} (ID: {peer_id[:16]}...)")
+
                 with self.lock:
                     for user in online_users:
                         peer_id = user["peer_id"]
                         if peer_id not in self.peer_directory:
                             placeholder_username = f"User_{peer_id[:8]}"
                             self.peer_directory[peer_id] = {
-                                "public_key": None,
+                                "public_key": user.get("public_key"),
                                 "username": placeholder_username,
                                 "verified": False,
                                 "first_seen": time.time(),
                                 "discovered": True,
+                                "username_hash": user.get("username_hash")
                             }
                             self.username_to_peer_map[placeholder_username] = peer_id
 
                 return online_users
             else:
+                print(f"[-] Discover request failed: {response.status_code}")
                 return []
-        except Exception:
+        except Exception as e:
+            print(f"[-] Discover online peers error: {e}")
             return []
 
     def _username_to_identity_hash(self, username: str) -> Optional[str]:
@@ -941,6 +969,7 @@ class AnonymousClient:
                 print("[-] Session validation failed")
                 return None
 
+            # Check for existing connection
             existing_conn = None
             with self.lock:
                 for conn_id, conn_info in self.active_connections.items():
@@ -958,7 +987,7 @@ class AnonymousClient:
                 return None
 
             target_port = connection_info.get("target_listening_port")
-            ip = connection_info.get("IP")
+            target_ip = connection_info.get("IP", "127.0.0.1")  # Default to localhost
             target_public_key = connection_info.get("target_public_key")
 
             if not target_port or not target_public_key:
@@ -968,61 +997,97 @@ class AnonymousClient:
             username = self.peer_directory.get(target_peer_id, {}).get(
                 "username", f"User_{target_peer_id[:8]}"
             )
-            print(f"[+] Connecting to {username} on port {target_port}")
+            print(f"[+] Connecting to {username} at {target_ip}:{target_port}")
 
+            # Test connection first
             test_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            test_sock.settimeout(3)
+            test_sock.settimeout(5)
             try:
-                test_sock.connect(("127.0.0.1", target_port))
+                test_sock.connect((target_ip, target_port))
                 test_sock.close()
             except Exception as e:
                 print(f"[-] Connection test failed: {e}")
                 return None
 
+            # Create main connection socket
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(15)
             try:
-                sock.connect(("127.0.0.1", target_port))
+                sock.connect((target_ip, target_port))
             except Exception as e:
                 print(f"[-] Connection to peer failed: {e}")
                 return None
 
+            # Send our public key FIRST
             sock.send(self.public_key_bytes)
-            target_key = sock.recv(32)
-            if len(target_key) != 32:
-                print("[-] Failed to receive target public key")
+
+            # Receive peer's public key with better error handling
+            try:
+                target_key = sock.recv(32)
+                if len(target_key) != 32:
+                    print("[-] Failed to receive valid target public key")
+                    sock.close()
+                    return None
+            except socket.timeout:
+                print("[-] Timeout receiving peer public key")
+                sock.close()
                 return None
 
+            # Send username length and username
             username_bytes = self.username.encode()
-            sock.send(struct.pack(">I", len(username_bytes)))
-            sock.send(username_bytes)
-
-            username_length_data = sock.recv(4)
-            if len(username_length_data) < 4:
-                print("[-] Failed to receive username length")
+            try:
+                sock.send(struct.pack(">I", len(username_bytes)))
+                sock.send(username_bytes)
+            except Exception as e:
+                print(f"[-] Failed to send username: {e}")
+                sock.close()
                 return None
-            username_length = struct.unpack(">I", username_length_data)[0]
-            received_username = sock.recv(username_length).decode()
 
+            # Receive peer's username
+            try:
+                username_length_data = sock.recv(4)
+                if len(username_length_data) < 4:
+                    print("[-] Failed to receive username length")
+                    sock.close()
+                    return None
+
+                username_length = struct.unpack(">I", username_length_data)[0]
+                if username_length > 100:
+                    print("[-] Username too long")
+                    sock.close()
+                    return None
+
+                received_username = sock.recv(username_length).decode()
+            except Exception as e:
+                print(f"[-] Failed to receive peer username: {e}")
+                sock.close()
+                return None
+
+            # Verify the public key matches what server told us
+            if target_key.hex() != target_public_key:
+                print(f"[-] Key mismatch with server info")
+                print(f"    Server provided: {target_public_key[:16]}...")
+                print(f"    Peer sent: {target_key.hex()[:16]}...")
+                sock.close()
+                return None
+
+            # Verify peer in directory
             if not self.verify_peer_public_key(
                 target_peer_id, target_key.hex(), received_username
             ):
                 print("[-] Peer verification failed")
+                sock.close()
                 return None
 
-            if target_key.hex() != target_public_key:
-                print("[-] Key mismatch with server info")
-                return None
-
+            # Derive shared secret
             shared_secret = self.derive_shared_secret(target_key.hex())
             if not shared_secret:
                 print("[-] Failed to derive shared secret")
+                sock.close()
                 return None
 
             connection_id = f"init_{received_username}"
-            print(
-                f"[+] Establishing connection {connection_id} with shared key {shared_secret.hex()[:16]}..."
-            )
+            print(f"[+] Establishing connection {connection_id} with shared key {shared_secret.hex()[:16]}...")
 
             with self.lock:
                 self.active_connections[connection_id] = {
@@ -1033,27 +1098,30 @@ class AnonymousClient:
                         "username": received_username,
                         "peer_id": target_peer_id,
                         "public_key": target_key.hex(),
-                        "address": ("127.0.0.1", target_port),
+                        "address": (target_ip, target_port),
                     },
                     "established": time.time(),
                     "verified": True,
                     "e2e_enabled": True,
                 }
 
+            # Start message loop in background
             thread = threading.Thread(
                 target=self._secure_message_loop,
                 args=(sock, shared_secret, connection_id),
+                daemon=True
             )
-            thread.daemon = True
             thread.start()
-
-            time.sleep(1.0)
 
             print(f"[+] Connection established successfully with {received_username}")
             return connection_id
 
         except Exception as e:
             print(f"[-] Connection error: {e}")
+            try:
+                sock.close()
+            except:
+                pass
             return None
 
     def get_connection_by_username(self, username: str) -> Optional[str]:
@@ -1068,6 +1136,50 @@ class AnonymousClient:
                     return conn_id
             return None
         except Exception:
+            return None
+
+    def check_for_connection(self, username_hash: str, peer_id: str) -> Optional[str]:
+        try:
+            while(True):
+                with self.lock:
+                    for conn_id, conn_info in self.active_connections.items():
+                        if conn_info.get("peer_info", {}).get("peer_id") == peer_id:
+                            print(f"[+] Found existing active connection: {conn_id}")
+                            return conn_id
+
+
+                if not self.ensure_valid_session():
+                    return None
+
+                params = {
+                    "username_hash": username_hash,
+                    "peer_id": peer_id,
+                    "session_token": self.session_token,
+                }
+
+                time.sleep(10)
+                response = requests.get(URL_CHECK_FOR_CONNECTION, params=params, timeout=10)
+                if response.status_code != 200:
+                    continue
+
+                result = response.json()
+                status = result.get("status")
+                if status != "ready":
+                    continue
+
+                target_port = result.get("target_listening_port")
+                target_ip = result.get("IP")
+                target_public_key = result.get("target_public_key")
+                if not target_port or not target_public_key:
+                    print("[-] Incomplete connection info from server")
+                    return None
+
+
+                print(f"[+] Peer ready. Connecting to {peer_id} at {target_ip}:{target_port}...")
+                return self.connect_to_peer_direct(peer_id, username_hash)
+
+        except Exception as e:
+            print(f"[-] check_for_connection error: {e}")
             return None
 
     def start_chat(self, connection_id_or_username):

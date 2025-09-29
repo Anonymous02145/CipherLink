@@ -9,6 +9,8 @@ import os
 import secrets
 import hashlib
 
+from werkzeug.serving import connection_dropped_errors
+
 app = Flask(__name__)
 
 
@@ -313,18 +315,19 @@ def get_key():
 @app.route("/set_listening_port", methods=["POST"])
 def set_listening_port():
     try:
-        data = request.get_json()
+        global _data
+        _data = request.get_json()
         if (
-            not data
-            or "username_hash" not in data
-            or "session_token" not in data
-            or "port" not in data
+            not _data
+            or "username_hash" not in _data
+            or "session_token" not in _data
+            or "port" not in _data
         ):
             return jsonify({"error": "Missing required fields"}), 400
 
-        username_hash = data["username_hash"]
-        session_token = data["session_token"]
-        port = data["port"]
+        username_hash = _data["username_hash"]
+        session_token = _data["session_token"]
+        port = _data["port"]
 
         if not isinstance(port, int) or port < 1024 or port > 65535:
             return jsonify({"error": "Invalid port number"}), 400
@@ -352,15 +355,16 @@ def set_listening_port():
 @app.route("/request_connection", methods=["POST"])
 def request_connection():
     try:
-        data = request.get_json()
+        global requests_data
+        requests_data = request.get_json()
         required_fields = ["username_hash", "target_username_hash", "session_token", "IP"]
-        if not data or any(field not in data for field in required_fields):
+        if not requests_data or any(field not in requests_data for field in required_fields):
             return jsonify({"error": "Missing required fields"}), 400
 
-        initiator_hash = data["username_hash"]
-        target_hash = data["target_username_hash"]
-        session_token = data["session_token"]
-        initiator_ip = data['IP']
+        initiator_hash = requests_data["username_hash"]
+        target_hash = requests_data["target_username_hash"]
+        session_token = requests_data["session_token"]
+        initiator_ip = requests_data['IP']
 
         if not validate_session(initiator_hash, session_token):
             log_connection_attempt(
@@ -455,12 +459,12 @@ def request_connection():
 @app.route("/discover_online", methods=["POST"])
 def discover_online():
     try:
-        data = request.get_json()
-        if not data or "username_hash" not in data or "session_token" not in data:
+        received_data = request.get_json()
+        if not received_data or "username_hash" not in received_data or "session_token" not in received_data:
             return jsonify({"error": "Missing credentials"}), 400
 
-        username_hash = data["username_hash"]
-        session_token = data["session_token"]
+        username_hash = received_data["username_hash"]
+        session_token = received_data["session_token"]
 
         if not validate_session(username_hash, session_token):
             return jsonify({"error": "Invalid session"}), 401
@@ -590,6 +594,55 @@ def debug_connections():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route("/check_for_connection", methods=["GET"])
+def check_for_connection():
+    try:
+        # GET parameters
+        username_hash = request.args.get("username_hash")  # the target user
+        if not username_hash:
+            return jsonify({"error": "Missing username_hash"}), 400
+
+        with LOCK:
+            # Iterate over pending connection requests
+            for conn_key, req_info in connection_requests.items():
+                initiator_hash, target_hash = conn_key.split("_")
+                if target_hash == username_hash:
+                    # Get target info from DB
+                    conn = get_db()
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        SELECT peer_id, public_key FROM users WHERE username_hash = ?
+                    """, (target_hash,))
+                    target_user = cursor.fetchone()
+                    conn.close()
+
+                    if not target_user:
+                        return jsonify({"error": "Target user not found"}), 404
+
+
+                    response = {
+                        "status": "connection_found",
+                        "peer_info": {
+                            "IP": req_info["initiator_IP"],
+                            "peer_id": req_info["initiator_peer_id"],
+                            "public_key": req_info["initiator_public_key"],
+                            "listening_port": req_info.get("initiator_listening_port")
+                        },
+                        "connection_id": conn_key
+                    }
+
+
+                    del connection_requests[conn_key]
+
+                    print(f"[SERVER] Connection request fetched for {username_hash[:16]} from {initiator_hash[:16]}")
+                    return jsonify(response)
+
+        # No pending requests
+        return jsonify({"status": "None"})
+
+    except Exception as e:
+        print(f"[SERVER] /check_for_connection error: {e}")
+        return jsonify({"error": str(e)}), 500
 
 def sanitize_database():
     while True:

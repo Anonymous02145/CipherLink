@@ -1,5 +1,6 @@
 from .client import AnonymousClient
 from .include import *
+import threading
 import json
 import time
 import os
@@ -72,6 +73,12 @@ def main():
 
     client = AnonymousClient(username)
 
+    # Start background connection checker
+    if client.peer_id:
+        thread = threading.Thread(target=client.check_for_connection, daemon=True,
+                                args=(client.identity_hash, client.peer_id))
+        thread.start()
+
     if not client.register_with_server():
         print("[-] Failed to establish secure session")
         return
@@ -109,6 +116,8 @@ def main():
                 if connection_id:
                     print(f"[+] E2E connection established!")
                     client.start_chat(connection_id)
+                else:
+                    print("[-] Failed to establish connection")
 
             elif choice == "2":
                 target_peer_id = input("Enter Peer ID: ").strip()
@@ -118,33 +127,39 @@ def main():
                 if connection_id:
                     print(f"[+] Secure connection established!")
                     client.start_chat(connection_id)
+                else:
+                    print("[-] Failed to establish connection")
 
             elif choice == "3":
                 client.multi_chat_interface()
 
             elif choice == "4":
-                print("[+] Discovering secure peers...")
                 online_peers = client.discover_online_peers()
                 if online_peers:
-                    print(f"\n[+] Found {len(online_peers)} online peers")
+                    print(f"\n[+] Found {len(online_peers)} online peers:")
                     for i, peer in enumerate(online_peers, 1):
-                        print(
-                            f"  {i}. User_{peer['peer_id'][:8]} (ID: {peer['peer_id'][:16]}...)"
-                        )
+                        peer_id_short = peer.get('peer_id', 'Unknown')[:16]
+                        print(f"  {i}. User_{peer_id_short} (ID: {peer_id_short}...)")
 
                     selection = input("\nSelect peer number or 'back': ").strip()
-                    if selection.lower() != "back":
-                        try:
-                            peer_num = int(selection)
-                            if 1 <= peer_num <= len(online_peers):
-                                peer = online_peers[peer_num - 1]
-                                connection_id = client.connect_to_peer_direct(
-                                    peer["peer_id"], peer["username_hash"]
-                                )
-                                if connection_id:
-                                    client.start_chat(connection_id)
-                        except ValueError:
-                            pass
+                    if selection.lower() == 'back':
+                        continue
+                    if selection.isdigit():
+                        peer_num = int(selection)
+                        if 1 <= peer_num <= len(online_peers):
+                            peer = online_peers[peer_num - 1]
+                            # Use username_hash for connection
+                            conn_id = client.connect_to_peer_direct(
+                                peer["peer_id"],
+                                peer.get("username_hash", peer["peer_id"])
+                            )
+                            if conn_id:
+                                print(f"[+] Successfully connected! Starting chat...")
+                                client.start_chat(conn_id)
+                            else:
+                                print("[-] Failed to establish connection")
+                else:
+                    print("[-] No online peers found or discovery failed")
 
             elif choice == "5":
                 client.show_connections()
@@ -152,8 +167,9 @@ def main():
             elif choice == "6":
                 print(f"\n[+] Known Peers: {len(client.peer_directory)}")
                 for peer_id, info in client.peer_directory.items():
-                    status = "Verified" if info["verified"] else "Unverified"
-                    print(f"  {info['username']} (ID: {peer_id[:16]}...) - {status}")
+                    status = "Verified" if info.get("verified", False) else "Unverified"
+                    username = info.get('username', 'Unknown')
+                    print(f"  {username} (ID: {peer_id[:16]}...) - {status}")
 
             elif choice == "7":
                 client._rotate_identity()
@@ -163,15 +179,19 @@ def main():
                 client._show_security_overview()
 
             elif choice == "9":
+                print("[+] Shutting down securely...")
                 client.shutdown()
                 break
+            else:
+                print("[-] Invalid option")
 
     except KeyboardInterrupt:
-        pass
-    except Exception:
-        pass
+        print("\n[+] Received interrupt signal...")
+    except Exception as e:
+        print(f"[-] Unexpected error: {e}")
     finally:
         client.shutdown()
+        print("[+] Client shut down successfully")
 
 
 def signal_handler(signum, frame):
@@ -190,17 +210,18 @@ if __name__ == "__main__":
     current_mode = load_settings()
     print(f"[+] Mode: {current_mode}")
 
-    # Start background watcher (optional)
-    # start_watcher_thread()
-
     # Start the client
     if current_mode == "Public":
         print("[+] Running in Public mode")
         main()
     elif current_mode == "User":
         print("[!] User mode not yet implemented")
+        # Fall back to public mode for now
+        main()
     elif current_mode == "Anonymous":
         print("[!] Anonymous mode not yet implemented")
+        # Fall back to public mode for now
+        main()
     else:
         print(f"[-] Unknown mode: {current_mode}, defaulting to Public")
         main()
