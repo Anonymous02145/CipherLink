@@ -6,19 +6,31 @@ import time
 import os
 import sys
 import signal
+import logging
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    handlers=[
+        logging.FileHandler('client.log'),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
+logger = logging.getLogger(__name__)
 
 def load_settings():
     """Load settings without blocking"""
     module_dir = os.path.dirname(os.path.abspath(__file__))
     settings_path = os.path.join(module_dir, "settings", "settings.json")
 
-    # Create settings directory and default file if they don't exist
+
     settings_dir = os.path.join(module_dir, "settings")
     if not os.path.exists(settings_dir):
         os.makedirs(settings_dir)
 
     if not os.path.exists(settings_path):
-        default_settings = {"Status": "Public"}
+        default_settings = {"Mode": "Public"}
         with open(settings_path, "w") as f:
             json.dump(default_settings, f, indent=2)
         return "Public"
@@ -26,14 +38,14 @@ def load_settings():
     try:
         with open(settings_path, "r") as f:
             settings = json.load(f)
-        return settings.get("Status", "Public")
+        return settings.get("Mode", "Public")
     except Exception as e:
-        print(f"[-] Error loading settings: {e}")
+        logger.error(f"Error loading settings: {e}")
         return "Public"
 
 
 def start_watcher_thread():
-    """Start settings watcher in background thread (for future use)"""
+    """Start settings watcher in background thread"""
     def watcher():
         module_dir = os.path.dirname(os.path.abspath(__file__))
         settings_path = os.path.join(module_dir, "settings", "settings.json")
@@ -42,7 +54,7 @@ def start_watcher_thread():
             with open(settings_path, "r") as f:
                 last = json.load(f)
         except:
-            last = {"Status": "Public"}
+            last = {"Mode": "Public"}
 
         while True:
             time.sleep(10)
@@ -51,19 +63,17 @@ def start_watcher_thread():
                     current = json.load(f)
 
                 if current != last:
-                    print(f"[*] Mode changed to {current.get('Status', 'Public')}")
+                    logger.info(f"Mode changed to {current.get('Mode', 'Public')}")
                     last = current
-                    # TODO: Notify UI or trigger mode change
             except Exception:
                 pass
 
-    import threading
     thread = threading.Thread(target=watcher, daemon=True)
     thread.start()
 
 
 def main():
-    print("-" * 60)
+    logger.info("-" * 60)
 
     username = input(
         "Enter your username (leave blank for random anonymous identity): "
@@ -71,24 +81,31 @@ def main():
     if not username:
         username = None
 
-    client = AnonymousClient(username)
+    try:
+        client = AnonymousClient(username)
+    except Exception as e:
+        logger.error(f"Failed to initialize client: {e}")
+        return
 
     # Start background connection checker
     if client.peer_id:
-        thread = threading.Thread(target=client.check_for_connection, daemon=True,
-                                args=(client.identity_hash, client.peer_id))
+        thread = threading.Thread(
+            target=client.check_for_connection,
+            daemon=True,
+            args=(client.identity_hash, client.peer_id)
+        )
         thread.start()
 
     if not client.register_with_server():
-        print("[-] Failed to establish secure session")
+        logger.error("Failed to establish secure session")
         return
 
     port = client.start_listener()
     if not port:
-        print("[-] Failed to start secure listener")
+        logger.error("Failed to start secure listener")
         return
 
-    client.print_status_line(f"[+] Secure client active on port {port}")
+    logger.info(f"Secure client active on port {port}")
 
     try:
         while True:
@@ -98,7 +115,7 @@ def main():
             print("1. Connect to peer by username")
             print("2. Connect to peer by Peer ID")
             print("3. Secure chat with connected peers")
-            print("4. Discover online peers (E2E recommended)")
+            print("4. Discover online peers")
             print("5. Show secure connections & E2E status")
             print("6. Show peer directory with verification")
             print("7. Rotate anonymous identity")
@@ -114,10 +131,10 @@ def main():
                     continue
                 connection_id = client.connect_to_username(target_username)
                 if connection_id:
-                    print(f"[+] E2E connection established!")
+                    logger.info("E2E connection established!")
                     client.start_chat(connection_id)
                 else:
-                    print("[-] Failed to establish connection")
+                    logger.warning("Failed to establish connection")
 
             elif choice == "2":
                 target_peer_id = input("Enter Peer ID: ").strip()
@@ -125,10 +142,10 @@ def main():
                     continue
                 connection_id = client.connect_to_peer_id(target_peer_id)
                 if connection_id:
-                    print(f"[+] Secure connection established!")
+                    logger.info("Secure connection established!")
                     client.start_chat(connection_id)
                 else:
-                    print("[-] Failed to establish connection")
+                    logger.warning("Failed to establish connection")
 
             elif choice == "3":
                 client.multi_chat_interface()
@@ -138,8 +155,9 @@ def main():
                 if online_peers:
                     print(f"\n[+] Found {len(online_peers)} online peers:")
                     for i, peer in enumerate(online_peers, 1):
+                        username = peer.get('username', 'Anonymous')
                         peer_id_short = peer.get('peer_id', 'Unknown')[:16]
-                        print(f"  {i}. User_{peer_id_short} (ID: {peer_id_short}...)")
+                        print(f"  {i}. {username} (ID: {peer_id_short}...)")
 
                     selection = input("\nSelect peer number or 'back': ").strip()
                     if selection.lower() == 'back':
@@ -148,18 +166,17 @@ def main():
                         peer_num = int(selection)
                         if 1 <= peer_num <= len(online_peers):
                             peer = online_peers[peer_num - 1]
-                            # Use username_hash for connection
                             conn_id = client.connect_to_peer_direct(
                                 peer["peer_id"],
                                 peer.get("username_hash", peer["peer_id"])
                             )
                             if conn_id:
-                                print(f"[+] Successfully connected! Starting chat...")
+                                logger.info("Successfully connected! Starting chat...")
                                 client.start_chat(conn_id)
                             else:
-                                print("[-] Failed to establish connection")
+                                logger.warning("Failed to establish connection")
                 else:
-                    print("[-] No online peers found or discovery failed")
+                    logger.warning("No online peers found or discovery failed")
 
             elif choice == "5":
                 client.show_connections()
@@ -168,34 +185,34 @@ def main():
                 print(f"\n[+] Known Peers: {len(client.peer_directory)}")
                 for peer_id, info in client.peer_directory.items():
                     status = "Verified" if info.get("verified", False) else "Unverified"
-                    username = info.get('username', 'Unknown')
+                    username = info.get('username', 'Anonymous')
                     print(f"  {username} (ID: {peer_id[:16]}...) - {status}")
 
             elif choice == "7":
                 client._rotate_identity()
-                print(f"[+] Identity rotated to: {client.username}")
+                logger.info(f"Identity rotated to: {client.username}")
 
             elif choice == "8":
                 client._show_security_overview()
 
             elif choice == "9":
-                print("[+] Shutting down securely...")
+                logger.info("Shutting down securely...")
                 client.shutdown()
                 break
             else:
-                print("[-] Invalid option")
+                logger.warning("Invalid option")
 
     except KeyboardInterrupt:
-        print("\n[+] Received interrupt signal...")
+        logger.info("\nReceived interrupt signal...")
     except Exception as e:
-        print(f"[-] Unexpected error: {e}")
+        logger.error(f"Unexpected error: {e}", exc_info=True)
     finally:
         client.shutdown()
-        print("[+] Client shut down successfully")
+        logger.info("Client shut down successfully")
 
 
 def signal_handler(signum, frame):
-    print("\n[+] Shutting down gracefully...")
+    logger.info("\nShutting down gracefully...")
     sys.exit(0)
 
 
@@ -203,25 +220,20 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
 
-    print("[+] Starting CipherLink client...")
-    print("[+] Checking configuration...")
+    logger.info("Starting CipherLink client...")
+    logger.info("Checking configuration...")
+
+    # Start settings watcher
+    start_watcher_thread()
 
     # Load settings without blocking
     current_mode = load_settings()
-    print(f"[+] Mode: {current_mode}")
+    logger.info(f"Mode: {current_mode}")
 
     # Start the client
-    if current_mode == "Public":
-        print("[+] Running in Public mode")
-        main()
-    elif current_mode == "User":
-        print("[!] User mode not yet implemented")
-        # Fall back to public mode for now
-        main()
-    elif current_mode == "Anonymous":
-        print("[!] Anonymous mode not yet implemented")
-        # Fall back to public mode for now
+    if current_mode in ["Public", "User", "Anonymous"]:
+        logger.info(f"Running in {current_mode} mode")
         main()
     else:
-        print(f"[-] Unknown mode: {current_mode}, defaulting to Public")
+        logger.warning(f"Unknown mode: {current_mode}, defaulting to Public")
         main()
