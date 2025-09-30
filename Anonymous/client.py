@@ -1,3 +1,4 @@
+from server.app import user_connection_counts
 from .include import *
 from .encryption import *
 from .file_transfer import *
@@ -862,51 +863,6 @@ class AnonymousClient:
         except Exception:
             return None
 
-    def discover_online_peers(self):
-        try:
-            if not self.ensure_valid_session():
-                    return []
-
-            data = {
-                "username_hash": self.identity_hash,
-                "session_token": self.session_token,
-            }
-
-            time.sleep(random.uniform(0.5, 2.0))
-
-            response = requests.post(URL_DISCOVER_ONLINE, json=data, timeout=15)
-            if response.status_code == 200:
-                online_users = response.json().get("online_users", [])
-
-                print(f"[+] Found {len(online_users)} online peers:")
-                for i, user in enumerate(online_users, 1):
-                    peer_id = user["peer_id"]
-                    username_hash = user.get("username_hash", "Unknown")
-                    print(f"  {i}. User_{peer_id[:8]} (ID: {peer_id[:16]}...)")
-
-                with self.lock:
-                    for user in online_users:
-                            peer_id = user["peer_id"]
-                            if peer_id not in self.peer_directory:
-                                placeholder_username = f"User_{peer_id[:8]}"
-                                self.peer_directory[peer_id] = {
-                                    "public_key": user.get("public_key"),
-                                    "username": placeholder_username,
-                                    "verified": False,
-                                    "first_seen": time.time(),
-                                    "discovered": True,
-                                    "username_hash": user.get("username_hash")
-                                }
-                                self.username_to_peer_map[placeholder_username] = peer_id
-
-                return online_users
-            else:
-                print(f"[-] Discover request failed: {response.status_code}")
-                return []
-        except Exception as e:
-            print(f"[-] Discover online peers error: {e}")
-            return []
-
     def _username_to_identity_hash(self, username: str) -> Optional[str]:
         try:
             digest = hashes.Hash(hashes.SHA256())
@@ -924,21 +880,33 @@ class AnonymousClient:
         except Exception:
             return None
 
-    def connect_to_username(self, target_username: str) -> Optional[str]:
+    def connect_to_username(self, username: str, target_username: str) -> Optional[str]:
         try:
             if not self.ensure_valid_session():
                 return None
 
             with self.lock:
-                target_peer_id = self.username_to_peer_map.get(target_username)
-                if not target_peer_id:
+                self_user_hash = self._username_to_identity_hash(username)
+                if not self_user_hash:
                     return None
 
             target_identity_hash = self._username_to_identity_hash(target_username)
             if not target_identity_hash:
                 return None
 
-            return self.connect_to_peer_direct(target_peer_id, target_identity_hash)
+            payload = {
+                "username_hash": self_user_hash,
+                "target_username_hash": target_identity_hash,
+                "session_token": self.session_token,
+                "IP": self.get_self_ip()
+            }
+
+            request = requests.post(URL_REQUEST_CONNECTION, params=payload)
+            if request.status_code == 200 and request.json().get("status") ==  "connection_ready":
+                target_peer_id = request.json().get("target_peer_id")
+                self.connect_to_peer_direct(target_peer_id, target_identity_hash)
+            else:
+                return None
 
         except Exception:
             return None
@@ -969,7 +937,6 @@ class AnonymousClient:
                 print("[-] Session validation failed")
                 return None
 
-            # Check for existing connection
             existing_conn = None
             with self.lock:
                 for conn_id, conn_info in self.active_connections.items():

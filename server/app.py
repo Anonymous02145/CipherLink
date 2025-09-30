@@ -455,6 +455,42 @@ def request_connection():
         )
         return jsonify({"error": "Connection request failed"}), 500
 
+@app.route("/check_update", methods=["GET"])
+def return_update():
+    try:
+        _update_validation = request.get_json()
+        username_hash = _update_validation["User_Hash"]
+        peer_id = _update_validation["Peer_ID"]
+        app_version = _update_validation["App_Version"]
+        ip = _update_validation.headers.get("X-Forwarded-For", 'X-Real-IP', _update_validation.remote_addr)
+
+        conn = sqlite3.connect("register.db")
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT * FROM users WHERE username_hash = ? AND peer_id = ?", (username_hash, peer_id))
+        userdata = cursor.fetchone()
+
+        if not userdata:
+            with open("blacklist.txt", "a") as f:
+                f.write(f"{username_hash} : {peer_id} : {ip}\n")
+            return jsonify({"error": "Internal Error"}), 404
+
+        try:
+            with open("app_history.txt", "r") as _file:
+                version = _file.read()
+
+            if version != app_version:
+                return jsonify({"error": "Update required"}), 400
+
+            return jsonify({"status": "success"})
+
+        except Exception as e:
+            print(f"[SERVER] Update check error: {e}")
+        return jsonify({"error": "Update check failed"}), 500
+
+    except Exception as e:
+        print(f"[SERVER] Error: {e}")
+        return jsonify({"error": "Internal Error"}), 500
 
 @app.route("/discover_online", methods=["POST"])
 def discover_online():
