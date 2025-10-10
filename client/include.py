@@ -21,8 +21,8 @@ import signal
 import uuid
 
 URL_IP = ["https://api.ipify.org", "https://ifconfig.me/ip", "https://checkip.amazonaws.com"]
-TEST_IP = "127.0.0.1"
-URL_BASE = "http://127.0.0.1:8000"
+TEST_IP = "192.168.1.159"
+URL_BASE = "http://192.168.1.159:8000"
 URL_REGISTER = f"{URL_BASE}/register"
 URL_AUTHENTICATE = f"{URL_BASE}/authenticate"
 URL_GET_KEY = f"{URL_BASE}/get_key"
