@@ -522,6 +522,7 @@ class AnonymousClient:
 
             # Send our public key
             client_sock.send(self.public_key_bytes)
+            print("sent public key : ", self.public_key_hex)
 
             # Receive username length and username
             username_length_data = b""
@@ -1014,7 +1015,7 @@ class AnonymousClient:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(15)
             try:
-                sock.connect(("127.0.0.1", target_port))
+                sock.connect((target_ip, target_port))
             except Exception as e:
                 print(f"[-] Connection to peer failed: {e}")
                 return None
