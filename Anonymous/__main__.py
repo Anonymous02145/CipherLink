@@ -1,9 +1,7 @@
-from turtle import update
-
-from Anonymous.check_for_updats import check_for_updates
-from .client import AnonymousClient
+from .check_for_updats import check_for_updates
+from .client2 import *
 from .include import *
-from .check_for_updates import *
+from .check_for_updats import *
 import threading
 import json
 import time
@@ -78,13 +76,14 @@ def start_watcher_thread():
 def main():
     logger.info("-" * 60)
 
-    username = input(
+    username = str(input(
         "Enter your username (leave blank for random anonymous identity): "
-    ).strip()
+    )).strip()
     if not username:
         username = None
 
     try:
+        global client
         client = AnonymousClient(username)
         update_thread = threading.Thread(target=check_for_updates, daemon=True, args=(hashlib.sha256(client.username.encode()).hexdigest(), client.peer_id))
         update_thread.start()
@@ -134,7 +133,7 @@ def main():
                 target_username = input("Enter username to connect to: ").strip()
                 if not target_username:
                     continue
-                connection_id = client.connect_to_username(target_username)
+                connection_id = client.connect_to_username(username, target_username)
                 if connection_id:
                     logger.info("E2E connection established!")
                     client.start_chat(connection_id)
