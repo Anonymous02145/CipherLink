@@ -231,6 +231,7 @@ class AnonymousClient:
                 format=serialization.PublicFormat.Raw,
             )
             self.public_key_hex = self.public_key_bytes.hex()
+            print("Generated public key : ", self.public_key_hex)
             return True
         except Exception:
             return False
