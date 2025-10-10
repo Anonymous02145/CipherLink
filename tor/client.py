@@ -976,7 +976,7 @@ class AnonymousClient:
             test_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             test_sock.settimeout(5)
             try:
-                test_sock.connect(("127.0.0.1", target_port))
+                test_sock.connect((target_ip, target_port))
                 test_sock.close()
             except Exception as e:
                 print(f"[-] Connection test failed: {e}")
@@ -986,7 +986,7 @@ class AnonymousClient:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(15)
             try:
-                sock.connect(("127.0.0.1", target_port))
+                sock.connect((target_ip, target_port))
             except Exception as e:
                 print(f"[-] Connection to peer failed: {e}")
                 return None
