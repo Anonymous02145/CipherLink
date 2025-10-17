@@ -6,6 +6,8 @@ from .validation import *
 from .traffic_manager import *
 from .logger import *
 from .chat_interface import *
+from .key_validation import *
+from .port_forwarding import PortForwardingManager
 
 class AnonymousClient:
     def __init__(self, username=None):
@@ -23,11 +25,14 @@ class AnonymousClient:
         self.public_key = None
         self.public_key_hex = None
         self.public_key_bytes = None
+        self.to_send = None
         self.peer_id = None
         self.identity_hash = None
         self.session_token = None
         self.session_expiry = 0
         self.listening_port = None
+        self.public_ip = None
+        self.public_port = None
 
         self.active_connections = {}
         self.peer_directory = {}
@@ -42,6 +47,7 @@ class AnonymousClient:
         self.connection_validator = ConnectionValidator()
         self.traffic_manager = AnonymousTrafficManager()
         self.secure_protocol = SecureMessageProtocol()
+        self.port_manager = PortForwardingManager()
 
         self.current_chat_peer = None
         self.ui_lock = threading.Lock()
@@ -230,6 +236,8 @@ class AnonymousClient:
                 encoding=serialization.Encoding.Raw,
                 format=serialization.PublicFormat.Raw,
             )
+
+            self.to_send = self.public_key_bytes
             self.public_key_hex = self.public_key_bytes.hex()
             print("Generated public key : ", self.public_key_hex)
             return True
@@ -446,7 +454,20 @@ class AnonymousClient:
                         target=self._listener_loop, daemon=True
                     )
                     listener_thread.start()
+                    external_port = self.port_manager.add_port_forward(
+                                local_port=self.listening_port,
+                                protocol='TCP'
+                            )
 
+                    if external_port:
+                            self.public_ip = self.port_manager.get_external_ip()
+                            self.public_port = external_port
+
+                            # NOTE: You MUST send self.public_ip and self.public_port to your
+                            # central rendezvous server now so other peers know where to connect.
+                    else:
+                        self.public_ip = None
+                        self.public_port = None
                     self._notify_server_of_port(port)
                     print(f"[+] Secure listener started on port {port}")
                     return port
@@ -492,7 +513,7 @@ class AnonymousClient:
             data = {
                 "username_hash": self.identity_hash,
                 "session_token": self.session_token,
-                "port": port,
+                "port": self.public_port,
                 "client_id": self.unique_client_id,
             }
 
@@ -833,7 +854,8 @@ class AnonymousClient:
                 "username_hash": self.identity_hash,
                 "target_username_hash": target_identity_hash,
                 "session_token": self.session_token,
-                "IP" : self.get_self_ip()
+                "IP" : self.public_ip,
+
             }
 
             for attempt in range(3):
@@ -989,7 +1011,7 @@ class AnonymousClient:
                 return None
 
             target_port = connection_info.get("target_listening_port")
-            target_ip = connection_info.get("IP", "127.0.0.1")  # Default to localhost
+            target_ip = connection_info.get("IP", "127.0.0.1")
             target_public_key = connection_info.get("target_public_key")
 
             if not target_port or not target_public_key:
@@ -1005,7 +1027,7 @@ class AnonymousClient:
             test_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             test_sock.settimeout(5)
             try:
-                test_sock.connect(("127.0.0.1", target_port))
+                test_sock.connect((target_ip, target_port))
                 test_sock.close()
             except Exception as e:
                 print(f"[-] Connection test failed: {e}")
@@ -1021,11 +1043,13 @@ class AnonymousClient:
                 return None
 
             # Send our public key FIRST
-            sock.send(self.public_key_bytes)
+            sock.send(self.to_send)
+            print("Public key sent : ", self.to_send)
 
             # Receive peer's public key with better error handling
             try:
                 target_key = sock.recv(32)
+                print("Received target public key", target_key)
                 if len(target_key) != 32:
                     print("[-] Failed to receive valid target public key")
                     sock.close()
@@ -1070,7 +1094,24 @@ class AnonymousClient:
                 print(f"[-] Key mismatch with server info")
                 print(f"    Server provided: {target_public_key[:16]}...")
                 print(f"    Peer sent: {target_key.hex()[:16]}...")
-                sock.close()
+                try:
+                    option = str(input("Do you want to continue without key verification? (y/n) (recomended: do not, potential MITM): "))
+                    if option.lower() == 'y':
+                        print("[+] Continuing without key verification")
+                    elif option.lower() == 'n':
+                        print("[-] Key verification failed")
+                        sock.close()
+                        return None
+                    else:
+                        print("Invalid option, defaulting to no")
+                        print("\n")
+                        print("Connection closed")
+                        sock.close()
+                        return None
+                except Exception as e:
+                    print(f"[-] Failed to get user input: {e}")
+                    sock.close()
+                    return None
                 return None
 
             # Verify peer in directory

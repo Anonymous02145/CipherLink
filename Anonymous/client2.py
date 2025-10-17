@@ -24,7 +24,8 @@ class AnonymousClient:
             self.private_key = None
             self.public_key = None
             self.public_key_hex = None
-            print("[+] Generating cryptographic keys...", self.public_key_hex)
+            self.to_send = None
+            print("[+] Generating cryptographic keys...", self.to_send)
             self.public_key_bytes = None
 
             # Generate unique keys for this instance RIGHT NOW
@@ -293,6 +294,7 @@ class AnonymousClient:
                 encoding=serialization.Encoding.Raw,
                 format=serialization.PublicFormat.Raw,
             )
+            self.to_send = self.public_key_bytes
             self.public_key_hex = self.public_key_bytes.hex()
             return True
         except Exception:
@@ -1074,21 +1076,19 @@ class AnonymousClient:
                return None
 
            # Send OUR public key first
-           sock.send(self.public_key_bytes)
-           print(f"[DEBUG] Sent our public key: {self.public_key_hex[:16]}...")
+           sock.send(self.to_send)
+           # print(f"[DEBUG] Sent our public key: {self.public_key_hex[:16]}...")
 
            # Receive PEER's public key
            try:
-               target_key_bytes = b""
-               while len(target_key_bytes) < 32:
-                   chunk = sock.recv(32 - len(target_key_bytes))
-                   if not chunk:
-                       print("[-] Failed to receive complete peer public key")
-                       sock.close()
-                       return None
-                   target_key_bytes += chunk
+               target_key = sock.recv(32)
+               print("Received target public key", target_key)
+               if len(target_key) != 32:
+                   print("[-] Failed to receive valid target public key")
+                   sock.close()
+                   return None
 
-               peer_sent_key = target_key_bytes.hex().strip().lower()
+               peer_sent_key = target_key.hex().strip().lower()
                print(f"[DEBUG] Received peer public key: {peer_sent_key[:16]}...")
 
            except socket.timeout:
@@ -1141,12 +1141,31 @@ class AnonymousClient:
                return None
 
            # Normalize keys for comparison
-           server_provided_key = server_provided_key.strip().lower()
+           # server_provided_key = server_provided_key.strip().lower()
 
            # CRITICAL: Verify we didn't receive our own key back
-           if peer_sent_key == self.public_key_hex.lower():
-               print(f"[-] CRITICAL: Peer sent our own public key back")
-               sock.close()
+           if target_key.hex() != server_provided_key:
+               print(f"[-] Key mismatch with server info")
+               print(f"    Server provided: {target_public_key[:16]}...")
+               print(f"    Peer sent: {target_key.hex()[:16]}...")
+               try:
+                   option = str(input("Do you want to continue without key verification? (y/n) (recomended: do not, potential MITM): "))
+                   if option.lower() == 'y':
+                       print("[+] Continuing without key verification")
+                   elif option.lower() == 'n':
+                       print("[-] Key verification failed")
+                       sock.close()
+                       return None
+                   else:
+                       print("Invalid option, defaulting to no")
+                       print("\n")
+                       print("Connection closed")
+                       sock.close()
+                       return None
+               except Exception as e:
+                   print(f"[-] Failed to get user input: {e}")
+                   sock.close()
+                   return None
                return None
 
            # VALIDATION: Check if we have the actual target public key from discovery
@@ -1161,10 +1180,28 @@ class AnonymousClient:
                print(f"[+] Key validated against discovered peer directory")
            else:
                # If no prior key, verify against server-provided key
-               if peer_sent_key != server_provided_key:
+               if target_key.hex() != server_provided_key:
                    print(f"[-] CRITICAL: Key mismatch with server-provided key")
                    print(f"    Server provided: {server_provided_key[:16]}...")
                    print(f"    Peer sent: {peer_sent_key[:16]}...")
+                   try:
+                       option = str(input("Do you want to continue without key verification? (y/n) (recomended: do not, potential MITM): "))
+                       if option.lower() == 'y':
+                           print("[+] Continuing without key verification")
+                       elif option.lower() == 'n':
+                           print("[-] Key verification failed")
+                           sock.close()
+                           return None
+                       else:
+                           print("Invalid option, defaulting to no")
+                           print("\n")
+                           print("Connection closed")
+                           sock.close()
+                           return None
+                   except Exception as e:
+                       print(f"[-] Failed to get user input: {e}")
+                       sock.close()
+                       return None
                    sock.close()
                    return None
                print(f"[+] Key validated against server-provided key")
