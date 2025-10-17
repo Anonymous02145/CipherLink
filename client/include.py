@@ -1,3 +1,4 @@
+from re import U
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import x25519
 from cryptography.hazmat.primitives import hashes
@@ -21,13 +22,14 @@ import signal
 import uuid
 
 URL_IP = ["https://api.ipify.org", "https://ifconfig.me/ip", "https://checkip.amazonaws.com"]
-URL_REGISTER = "https://lz1np6nl-8000.inc1.devtunnels.ms/register"
-URL_AUTHENTICATE = "https://lz1np6nl-8000.inc1.devtunnels.ms/authenticate"
-URL_GET_KEY = "https://lz1np6nl-8000.inc1.devtunnels.ms/get_key"
-URL_SET_PORT = "https://lz1np6nl-8000.inc1.devtunnels.ms/set_listening_port"
-URL_REQUEST_CONNECTION = "https://lz1np6nl-8000.inc1.devtunnels.ms/request_connection"
-URL_DISCOVER_ONLINE = "https://lz1np6nl-8000.inc1.devtunnels.ms/discover_online"
-URL_CHECK_FOR_CONNECTION = "https://lz1np6nl-8000.inc1.devtunnels.ms/check_for_connection"
+BASE = "49.205.203.177"
+URL_REGISTER =f"https://{BASE}:8000/register"
+URL_AUTHENTICATE = f"https://{BASE}:8000/authenticate"
+URL_GET_KEY = f"https://{BASE}:8000/get_key"
+URL_SET_PORT = f"https://{BASE}:8000/set_listening_port"
+URL_REQUEST_CONNECTION = f"https://{BASE}:8000/request_connection"
+URL_DISCOVER_ONLINE = f"https://{BASE}:8000/discover_online"
+URL_CHECK_FOR_CONNECTION = f"https://{BASE}:8000/check_for_connection"
 
 MESSAGE_PADDING_SIZE = 256
 SESSION_ROTATION_HOURS = 24

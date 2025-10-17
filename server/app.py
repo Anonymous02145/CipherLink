@@ -733,4 +733,4 @@ if __name__ == "__main__":
     print(
         "[SERVER] Features: Multi-peer connections, Public key verification, Connection logging"
     )
-    app.run(host="0.0.0.0", port=8000, debug=False, threaded=True)
+    app.run(host="49.205.203.177", port=8000, debug=False, threaded=True)
