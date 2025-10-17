@@ -1,7 +1,7 @@
 import requests
 import os
 
-URL_CHECK_UPDATE = "http://127.0.0.1:8000/check_update"
+URL_CHECK_UPDATE = "http://192.168.1.159:8000/check_update"
 os.system("touch /home/fsociety/CipherLink/Anonymous/Version.txt")
 os.system("echo 'version 0.1' > Version.txt")
 
