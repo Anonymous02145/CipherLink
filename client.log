@@ -1053,3 +1053,41 @@ Traceback (most recent call last):
        ^^^^^^^^^^^^^^^^^^^^^^
 AttributeError: 'AnonymousClient' object has no attribute 'connection_mode'
 2025-10-17 15:48:59,764 [INFO] Client shut down successfully
+2025-10-17 15:51:49,540 [INFO] Starting CipherLink client...
+2025-10-17 15:51:49,541 [INFO] Checking configuration...
+2025-10-17 15:51:49,543 [INFO] Mode: Public
+2025-10-17 15:51:49,544 [INFO] Running in Public mode
+2025-10-17 15:51:49,544 [INFO] ------------------------------------------------------------
+2025-10-17 15:52:00,128 [INFO] Secure client active on port 8080
+2025-10-17 15:52:24,103 [INFO] 
+Shutting down gracefully...
+2025-10-17 15:52:25,010 [INFO] Client shut down successfully
+2025-10-17 15:54:07,240 [INFO] Starting CipherLink client...
+2025-10-17 15:54:07,240 [INFO] Checking configuration...
+2025-10-17 15:54:07,242 [INFO] Mode: Public
+2025-10-17 15:54:07,242 [INFO] Running in Public mode
+2025-10-17 15:54:07,243 [INFO] ------------------------------------------------------------
+2025-10-17 15:54:20,471 [INFO] Secure client active on port 8080
+2025-10-17 15:54:42,884 [WARNING] Failed to establish connection
+2025-10-17 15:55:00,155 [WARNING] Failed to establish connection
+2025-10-17 15:55:36,809 [INFO] Shutting down securely...
+2025-10-17 15:55:37,261 [INFO] Client shut down successfully
+2025-10-17 15:59:55,491 [INFO] Starting CipherLink client...
+2025-10-17 15:59:55,492 [INFO] Checking configuration...
+2025-10-17 15:59:55,495 [INFO] Mode: Public
+2025-10-17 15:59:55,496 [INFO] Running in Public mode
+2025-10-17 15:59:55,497 [INFO] ------------------------------------------------------------
+2025-10-17 16:00:05,598 [INFO] Secure client active on port 8080
+2025-10-17 16:04:09,478 [INFO] 
+Shutting down gracefully...
+2025-10-17 16:04:09,692 [INFO] Client shut down successfully
+2025-10-17 16:04:12,715 [INFO] Starting CipherLink client...
+2025-10-17 16:04:12,716 [INFO] Checking configuration...
+2025-10-17 16:04:12,718 [INFO] Mode: Public
+2025-10-17 16:04:12,719 [INFO] Running in Public mode
+2025-10-17 16:04:12,719 [INFO] ------------------------------------------------------------
+2025-10-17 16:04:26,228 [INFO] Secure client active on port 8080
+2025-10-17 16:04:55,685 [WARNING] Failed to establish connection
+2025-10-17 16:10:17,696 [INFO] 
+Shutting down gracefully...
+2025-10-17 16:10:17,933 [INFO] Client shut down successfully

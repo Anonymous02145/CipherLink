@@ -31,7 +31,8 @@ class AnonymousClient:
         self.session_token = None
         self.session_expiry = 0
         self.listening_port = None
-        self.public_ip = None
+        response = requests.get('https://api.ipify.org')
+        self.public_ip = response.text
         self.public_port = None
 
         self.active_connections = {}
