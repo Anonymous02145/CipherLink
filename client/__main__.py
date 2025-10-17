@@ -85,8 +85,7 @@ def main():
     try:
         global client
         client = AnonymousClient(username)
-        # update_thread = threading.Thread(target=check_for_updates, daemon=True, args=(hashlib.sha256(client.username.encode()).hexdigest(), client.peer_id))
-        # update_thread.start()
+
     except Exception as e:
         logger.error(f"Failed to initialize client: {e}")
         return
