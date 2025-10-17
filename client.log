@@ -1001,3 +1001,37 @@ Shutting down gracefully...
 2025-10-17 14:56:56,194 [INFO] 
 Shutting down gracefully...
 2025-10-17 14:56:56,413 [INFO] Client shut down successfully
+2025-10-17 15:02:59,072 [INFO] Starting CipherLink client...
+2025-10-17 15:02:59,072 [INFO] Checking configuration...
+2025-10-17 15:02:59,074 [INFO] Mode: Public
+2025-10-17 15:02:59,074 [INFO] Running in Public mode
+2025-10-17 15:02:59,074 [INFO] ------------------------------------------------------------
+2025-10-17 15:03:13,302 [INFO] Secure client active on port 8080
+2025-10-17 15:03:18,490 [WARNING] No online peers found or discovery failed
+2025-10-17 15:03:24,743 [WARNING] No online peers found or discovery failed
+2025-10-17 15:03:45,958 [WARNING] No online peers found or discovery failed
+2025-10-17 15:04:07,662 [ERROR] Unexpected error: AnonymousClient.connect_to_username() takes 2 positional arguments but 3 were given
+Traceback (most recent call last):
+  File "/home/fsociety/CipherLink/client/__main__.py", line 138, in main
+    connection_id = client.connect_to_username(username, target_username)
+TypeError: AnonymousClient.connect_to_username() takes 2 positional arguments but 3 were given
+2025-10-17 15:04:08,427 [INFO] Client shut down successfully
+2025-10-17 15:04:42,705 [INFO] Starting CipherLink client...
+2025-10-17 15:04:42,705 [INFO] Checking configuration...
+2025-10-17 15:04:42,709 [INFO] Mode: Public
+2025-10-17 15:04:42,709 [INFO] Running in Public mode
+2025-10-17 15:04:42,709 [INFO] ------------------------------------------------------------
+2025-10-17 15:04:48,562 [INFO] Secure client active on port 8080
+2025-10-17 15:05:09,234 [WARNING] Failed to establish connection
+2025-10-17 15:05:17,347 [INFO] 
+Shutting down gracefully...
+2025-10-17 15:05:17,421 [INFO] Client shut down successfully
+2025-10-17 15:08:58,537 [INFO] Starting CipherLink client...
+2025-10-17 15:08:58,537 [INFO] Checking configuration...
+2025-10-17 15:08:58,539 [INFO] Mode: Public
+2025-10-17 15:08:58,539 [INFO] Running in Public mode
+2025-10-17 15:08:58,540 [INFO] ------------------------------------------------------------
+2025-10-17 15:09:22,544 [INFO] Secure client active on port 8080
+2025-10-17 15:09:38,349 [INFO] 
+Shutting down gracefully...
+2025-10-17 15:09:38,499 [INFO] Client shut down successfully
