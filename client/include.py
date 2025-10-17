@@ -23,13 +23,13 @@ import uuid
 
 URL_IP = ["https://api.ipify.org", "https://ifconfig.me/ip", "https://checkip.amazonaws.com"]
 BASE = "49.205.203.177"
-URL_REGISTER =f"https://{BASE}:8000/register"
-URL_AUTHENTICATE = f"https://{BASE}:8000/authenticate"
-URL_GET_KEY = f"https://{BASE}:8000/get_key"
-URL_SET_PORT = f"https://{BASE}:8000/set_listening_port"
-URL_REQUEST_CONNECTION = f"https://{BASE}:8000/request_connection"
-URL_DISCOVER_ONLINE = f"https://{BASE}:8000/discover_online"
-URL_CHECK_FOR_CONNECTION = f"https://{BASE}:8000/check_for_connection"
+URL_REGISTER ="https://ossie-grumous-nanci.ngrok-free.dev/register"
+URL_AUTHENTICATE = "https://ossie-grumous-nanci.ngrok-free.dev/authenticate"
+URL_GET_KEY = "https://ossie-grumous-nanci.ngrok-free.dev/get_key"
+URL_SET_PORT = "https://ossie-grumous-nanci.ngrok-free.dev/set_listening_port"
+URL_REQUEST_CONNECTION = "https://ossie-grumous-nanci.ngrok-free.dev/request_connection"
+URL_DISCOVER_ONLINE = "https://ossie-grumous-nanci.ngrok-free.dev/discover_online"
+URL_CHECK_FOR_CONNECTION = "https://ossie-grumous-nanci.ngrok-free.dev/check_for_connection"
 
 MESSAGE_PADDING_SIZE = 256
 SESSION_ROTATION_HOURS = 24
