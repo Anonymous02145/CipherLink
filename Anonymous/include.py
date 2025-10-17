@@ -21,13 +21,13 @@ import signal
 import uuid
 
 URL_IP = ["https://api.ipify.org", "https://ifconfig.me/ip", "https://checkip.amazonaws.com"]
-URL_REGISTER = "https://lz1np6nl-8000.inc1.devtunnels.ms/register"
-URL_AUTHENTICATE = "https://lz1np6nl-8000.inc1.devtunnels.ms/authenticate"
-URL_GET_KEY = "https://lz1np6nl-8000.inc1.devtunnels.ms/get_key"
-URL_SET_PORT = "https://lz1np6nl-8000.inc1.devtunnels.ms/set_listening_port"
-URL_REQUEST_CONNECTION = "https://lz1np6nl-8000.inc1.devtunnels.ms/request_connection"
-URL_DISCOVER_ONLINE = "https://lz1np6nl-8000.inc1.devtunnels.ms/discover_online"
-URL_CHECK_FOR_CONNECTION = "https://lz1np6nl-8000.inc1.devtunnels.ms/check_for_connection"
+URL_REGISTER = "https://ossie-grumous-nanci.ngrok-free.dev/register"
+URL_AUTHENTICATE = "https://ossie-grumous-nanci.ngrok-free.dev/authenticate"
+URL_GET_KEY = "https://ossie-grumous-nanci.ngrok-free.dev/get_key"
+URL_SET_PORT = "https://ossie-grumous-nanci.ngrok-free.dev/set_listening_port"
+URL_REQUEST_CONNECTION = "https://ossie-grumous-nanci.ngrok-free.dev/request_connection"
+URL_DISCOVER_ONLINE = "https://ossie-grumous-nanci.ngrok-free.dev/discover_online"
+URL_CHECK_FOR_CONNECTION = "https://ossie-grumous-nanci.ngrok-free.dev/check_for_connection"
 
 MESSAGE_PADDING_SIZE = 256
 SESSION_ROTATION_HOURS = 24
