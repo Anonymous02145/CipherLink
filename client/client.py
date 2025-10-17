@@ -31,10 +31,18 @@ class AnonymousClient:
         self.session_token = None
         self.session_expiry = 0
         self.listening_port = None
-        response = requests.get('https://api.ipify.org')
         self.public_ip = response.text
         self.public_port = None
-
+        try:
+            response = requests.get('https://api.ipify.org', timeout=5)
+            self.public_ip = response.text.strip()
+            print(f"[+] Public IP: {self.public_ip}")
+        except:
+            try:
+                response = requests.get('https://ifconfig.me/ip', timeout=5)
+                self.public_ip = response.text.strip()
+            except:
+                self.public_ip = "unknown"
         self.active_connections = {}
         self.peer_directory = {}
         self.username_to_peer_map = {}
@@ -424,16 +432,7 @@ class AnonymousClient:
     def start_listener(self) -> int:
         try:
             preferred_ports = [
-                8080,
-                8081,
-                8082,
-                8083,
-                8084,
-                8085,
-                8086,
-                8087,
-                8088,
-                8089,
+                8080, 8081, 8082, 8083, 8084, 8085, 8086, 8087, 8088, 8089,
             ]
 
             for port in preferred_ports:
@@ -455,19 +454,27 @@ class AnonymousClient:
                         target=self._listener_loop, daemon=True
                     )
                     listener_thread.start()
+
+                    # Try UPnP port forwarding first
                     external_port = self.port_manager.add_port_forward(
-                                local_port=self.listening_port,
-                                protocol='TCP'
-                            )
+                        local_port=self.listening_port,
+                        protocol='TCP'
+                    )
 
                     if external_port:
-                            self.public_port = external_port
+                        self.public_port = external_port
+                        print(f"[+] UPnP port forward successful: {external_port} -> {port}")
+                    else:
+                        # Manual port forwarding assumed
+                        self.public_port = port
+                        print(f"[!] UPnP failed. Assuming manual port forward: {port}")
+                        print(f"[!] Make sure to forward port {port} on your router!")
 
-                            # NOTE: You MUST send self.public_ip and self.public_port to your
-                            # central rendezvous server now so other peers know where to connect.
 
-                    self._notify_server_of_port(port)
-                    print(f"[+] Secure listener started on port {port}")
+                    self._notify_server_of_port(self.public_port)
+
+                    print(f"[+] Listener started on 0.0.0.0:{port}")
+                    print(f"[+] External address: {self.public_ip}:{self.public_port}")
                     return port
 
                 except OSError as e:
@@ -1009,12 +1016,12 @@ class AnonymousClient:
                 return None
 
             target_port = connection_info.get("target_listening_port")
-            target_ip = connection_info.get("IP", "127.0.0.1")
+            target_ip = connection_info.get("IP")  # This will now be the public IP
             target_public_key = connection_info.get("target_public_key")
 
-            if not target_port or not target_public_key:
-                print("[-] Missing connection info from server")
-                return None
+            if not target_port or not target_public_key or not target_ip:
+               print("[-] Missing connection info from server")
+               return None
 
             username = self.peer_directory.get(target_peer_id, {}).get(
                 "username", f"User_{target_peer_id[:8]}"
