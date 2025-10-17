@@ -21,15 +21,13 @@ import signal
 import uuid
 
 URL_IP = ["https://api.ipify.org", "https://ifconfig.me/ip", "https://checkip.amazonaws.com"]
-TEST_IP = "192.168.1.159"
-URL_BASE = "http://192.168.1.159:8000"
-URL_REGISTER = f"{URL_BASE}/register"
-URL_AUTHENTICATE = f"{URL_BASE}/authenticate"
-URL_GET_KEY = f"{URL_BASE}/get_key"
-URL_SET_PORT = f"{URL_BASE}/set_listening_port"
-URL_REQUEST_CONNECTION = f"{URL_BASE}/request_connection"
-URL_DISCOVER_ONLINE = f"{URL_BASE}/discover_online"
-URL_CHECK_FOR_CONNECTION = f"{URL_BASE}/check_for_connection"
+URL_REGISTER = "https://lz1np6nl-8000.inc1.devtunnels.ms/register"
+URL_AUTHENTICATE = "https://lz1np6nl-8000.inc1.devtunnels.ms/authenticate"
+URL_GET_KEY = "https://lz1np6nl-8000.inc1.devtunnels.ms/get_key"
+URL_SET_PORT = "https://lz1np6nl-8000.inc1.devtunnels.ms/set_listening_port"
+URL_REQUEST_CONNECTION = "https://lz1np6nl-8000.inc1.devtunnels.ms/request_connection"
+URL_DISCOVER_ONLINE = "https://lz1np6nl-8000.inc1.devtunnels.ms/discover_online"
+URL_CHECK_FOR_CONNECTION = "https://lz1np6nl-8000.inc1.devtunnels.ms/check_for_connection"
 
 MESSAGE_PADDING_SIZE = 256
 SESSION_ROTATION_HOURS = 24

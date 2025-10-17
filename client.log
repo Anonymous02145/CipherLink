@@ -1035,3 +1035,21 @@ Shutting down gracefully...
 2025-10-17 15:09:38,349 [INFO] 
 Shutting down gracefully...
 2025-10-17 15:09:38,499 [INFO] Client shut down successfully
+2025-10-17 15:48:03,512 [INFO] Starting CipherLink client...
+2025-10-17 15:48:03,513 [INFO] Checking configuration...
+2025-10-17 15:48:03,516 [INFO] Mode: Public
+2025-10-17 15:48:03,516 [INFO] Running in Public mode
+2025-10-17 15:48:03,516 [INFO] ------------------------------------------------------------
+2025-10-17 15:48:17,585 [INFO] Secure client active on port 8080
+2025-10-17 15:48:44,252 [WARNING] No online peers found or discovery failed
+2025-10-17 15:48:55,305 [WARNING] Invalid option
+2025-10-17 15:48:59,588 [ERROR] Unexpected error: 'AnonymousClient' object has no attribute 'connection_mode'
+Traceback (most recent call last):
+  File "/home/fsociety/CipherLink/client/__main__.py", line 210, in main
+    _port_forwarding_menu(client)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "/home/fsociety/CipherLink/client/__main__.py", line 280, in _port_forwarding_menu
+    if client.connection_mode == "tor":
+       ^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'AnonymousClient' object has no attribute 'connection_mode'
+2025-10-17 15:48:59,764 [INFO] Client shut down successfully
