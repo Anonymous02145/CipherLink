@@ -25,7 +25,6 @@ class AnonymousClient:
             self.public_key = None
             self.public_key_hex = None
             self.to_send = None
-            print("[+] Generating cryptographic keys...", self.to_send)
             self.public_key_bytes = None
 
             # Generate unique keys for this instance RIGHT NOW
@@ -1077,7 +1076,7 @@ class AnonymousClient:
 
            # Send OUR public key first
            sock.send(self.to_send)
-           # print(f"[DEBUG] Sent our public key: {self.public_key_hex[:16]}...")
+           print(f"[DEBUG] Sent our public key: {self.public_key_hex[:16]}...")
 
            # Receive PEER's public key
            try:
@@ -1085,8 +1084,8 @@ class AnonymousClient:
                print("Received target public key", target_key)
                if len(target_key) != 32:
                    print("[-] Failed to receive valid target public key")
-                   sock.close()
-                   return None
+                   # sock.close()
+                   # return None
 
                peer_sent_key = target_key.hex().strip().lower()
                print(f"[DEBUG] Received peer public key: {peer_sent_key[:16]}...")
@@ -1141,12 +1140,12 @@ class AnonymousClient:
                return None
 
            # Normalize keys for comparison
-           # server_provided_key = server_provided_key.strip().lower()
+           server_provided_key = server_provided_key.strip().lower()
 
            # CRITICAL: Verify we didn't receive our own key back
            if target_key.hex() != server_provided_key:
                print(f"[-] Key mismatch with server info")
-               print(f"    Server provided: {target_public_key[:16]}...")
+               print(f"    Server provided: {target_key[:16]}...")
                print(f"    Peer sent: {target_key.hex()[:16]}...")
                try:
                    option = str(input("Do you want to continue without key verification? (y/n) (recomended: do not, potential MITM): "))

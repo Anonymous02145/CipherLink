@@ -1,7 +1,7 @@
 import requests
 import os
 
-URL_CHECK_UPDATE = "http://check_update"
+URL_CHECK_UPDATE = "https://ossie-grumous-nanci.ngrok-free.dev/check_update"
 os.system("touch /home/fsociety/CipherLink/Anonymous/Version.txt")
 os.system("echo 'version 0.1' > Version.txt")
 

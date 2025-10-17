@@ -1154,3 +1154,58 @@ Shutting down gracefully...
 2025-10-17 19:35:27,829 [DEBUG] GETCONF __owningcontrollerprocess (runtime: 0.0007)
 2025-10-17 19:35:27,837 [DEBUG] RESETCONF __OwningControllerProcess (runtime: 0.0070)
 2025-10-17 19:35:30,135 [ERROR] Failed to establish secure session
+2025-10-17 19:39:36,387 [INFO] Starting CipherLink client...
+2025-10-17 19:39:36,388 [INFO] Checking configuration...
+2025-10-17 19:39:36,390 [INFO] Mode: Public
+2025-10-17 19:39:36,390 [INFO] Running in Public mode
+2025-10-17 19:39:36,390 [INFO] ------------------------------------------------------------
+2025-10-17 19:39:49,331 [DEBUG] System call: tor --version (runtime: 0.02)
+2025-10-17 19:40:11,948 [INFO] 
+Shutting down gracefully...
+2025-10-17 19:44:43,895 [INFO] Starting CipherLink client...
+2025-10-17 19:44:43,896 [INFO] Checking configuration...
+2025-10-17 19:44:43,898 [INFO] Mode: Public
+2025-10-17 19:44:43,899 [INFO] Running in Public mode
+2025-10-17 19:44:43,899 [INFO] ------------------------------------------------------------
+2025-10-17 19:44:50,133 [DEBUG] System call: tor --version (runtime: 0.07)
+2025-10-17 19:45:03,630 [DEBUG] GETCONF __owningcontrollerprocess (runtime: 0.0006)
+2025-10-17 19:45:03,638 [DEBUG] RESETCONF __OwningControllerProcess (runtime: 0.0068)
+2025-10-17 19:45:03,920 [DEBUG] GETINFO version (runtime: 0.0011)
+2025-10-17 19:45:03,922 [DEBUG] GETCONF hiddenservicesinglehopmode (runtime: 0.0010)
+2025-10-17 19:45:08,734 [INFO] Secure client active on port 8080
+2025-10-17 19:45:27,575 [INFO] 
+Shutting down gracefully...
+2025-10-17 19:45:27,630 [INFO] Error while receiving a control message (SocketClosed): received exception "read of closed file"
+2025-10-17 19:45:27,632 [INFO] Client shut down successfully
+2025-10-17 19:46:09,035 [INFO] Starting CipherLink client...
+2025-10-17 19:46:09,036 [INFO] Checking configuration...
+2025-10-17 19:46:09,038 [INFO] Mode: Public
+2025-10-17 19:46:09,038 [INFO] Running in Public mode
+2025-10-17 19:46:09,039 [INFO] ------------------------------------------------------------
+2025-10-17 19:46:11,026 [DEBUG] System call: tor --version (runtime: 0.05)
+2025-10-17 19:46:23,328 [DEBUG] GETCONF __owningcontrollerprocess (runtime: 0.0009)
+2025-10-17 19:46:23,336 [DEBUG] RESETCONF __OwningControllerProcess (runtime: 0.0071)
+2025-10-17 19:46:27,151 [DEBUG] GETINFO version (runtime: 0.0009)
+2025-10-17 19:46:27,153 [DEBUG] GETCONF hiddenservicesinglehopmode (runtime: 0.0007)
+2025-10-17 19:46:31,931 [INFO] Secure client active on port 8080
+2025-10-17 19:47:00,839 [WARNING] Failed to establish connection
+2025-10-17 19:53:06,895 [INFO] 
+Shutting down gracefully...
+2025-10-17 19:53:06,970 [INFO] Error while receiving a control message (SocketClosed): empty socket content
+2025-10-17 19:53:08,399 [INFO] Client shut down successfully
+2025-10-17 19:53:32,633 [INFO] Starting CipherLink client...
+2025-10-17 19:53:32,634 [INFO] Checking configuration...
+2025-10-17 19:53:32,636 [INFO] Mode: Public
+2025-10-17 19:53:32,636 [INFO] Running in Public mode
+2025-10-17 19:53:32,636 [INFO] ------------------------------------------------------------
+2025-10-17 19:53:41,420 [DEBUG] System call: tor --version (runtime: 0.03)
+2025-10-17 19:53:53,973 [DEBUG] GETCONF __owningcontrollerprocess (runtime: 0.0008)
+2025-10-17 19:53:53,981 [DEBUG] RESETCONF __OwningControllerProcess (runtime: 0.0067)
+2025-10-17 19:53:54,208 [DEBUG] GETINFO version (runtime: 0.0009)
+2025-10-17 19:53:54,210 [DEBUG] GETCONF hiddenservicesinglehopmode (runtime: 0.0009)
+2025-10-17 19:53:58,830 [INFO] Secure client active on port 8080
+2025-10-17 19:54:34,664 [WARNING] Failed to establish connection
+2025-10-17 19:59:03,389 [INFO] 
+Shutting down gracefully...
+2025-10-17 19:59:03,456 [INFO] Error while receiving a control message (SocketClosed): empty socket content
+2025-10-17 19:59:03,527 [INFO] Client shut down successfully
