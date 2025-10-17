@@ -461,14 +461,11 @@ class AnonymousClient:
                             )
 
                     if external_port:
-                            self.public_ip = self.port_manager.get_external_ip()
                             self.public_port = external_port
 
                             # NOTE: You MUST send self.public_ip and self.public_port to your
                             # central rendezvous server now so other peers know where to connect.
-                    else:
-                        self.public_ip = None
-                        self.public_port = None
+
                     self._notify_server_of_port(port)
                     print(f"[+] Secure listener started on port {port}")
                     return port
