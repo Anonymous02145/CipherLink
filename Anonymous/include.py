@@ -25,7 +25,7 @@ URL_REGISTER = "https://ossie-grumous-nanci.ngrok-free.dev/register"
 URL_AUTHENTICATE = "https://ossie-grumous-nanci.ngrok-free.dev/authenticate"
 URL_GET_KEY = "https://ossie-grumous-nanci.ngrok-free.dev/get_key"
 URL_SET_PORT = "https://ossie-grumous-nanci.ngrok-free.dev/set_listening_port"
-URL_REQUEST_CONNECTION = "https://ossie-grumous-nanci.ngrok-free.dev/request_connection"
+URL_REQUEST_CONNECTION = "https://ossie-grumous-nanci.ngrok-free.dev/request_connection_onion"
 URL_DISCOVER_ONLINE = "https://ossie-grumous-nanci.ngrok-free.dev/discover_online"
 URL_CHECK_FOR_CONNECTION = "https://ossie-grumous-nanci.ngrok-free.dev/check_for_connection"
 

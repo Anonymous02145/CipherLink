@@ -351,6 +351,108 @@ def set_listening_port():
         print(f"[SERVER] Set port error: {e}")
         return jsonify({"error": "Failed to set port"}), 500
 
+@app.route("/request_connection_onion", methods=["POST"])
+def request_connection():
+    try:
+        global requests_data
+        requests_data = request.get_json()
+        required_fields = ["username_hash", "target_username_hash", "session_token", "Onion"]
+        if not requests_data or any(field not in requests_data for field in required_fields):
+            return jsonify({"error": "Missing required fields"}), 400
+
+        initiator_hash = requests_data["username_hash"]
+        target_hash = requests_data["target_username_hash"]
+        session_token = requests_data["session_token"]
+        initiator_ip = requests_data['Onion']
+
+        if not validate_session(initiator_hash, session_token):
+            log_connection_attempt(
+                initiator_hash, target_hash, False, "Invalid session"
+            )
+            return jsonify({"error": "Invalid session"}), 401
+
+        if initiator_hash == target_hash:
+            log_connection_attempt(
+                initiator_hash, target_hash, False, "Self connection attempt"
+            )
+            return jsonify({"error": "Cannot connect to yourself"}), 400
+
+        current_time = time.time()
+
+        with LOCK:
+            # Get initiator info
+            conn = get_db()
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT peer_id, public_key FROM users WHERE username_hash = ?",
+                (initiator_hash,),
+            )
+            initiator = cursor.fetchone()
+            cursor.execute(
+                "SELECT peer_id, public_key FROM users WHERE username_hash = ?",
+                (target_hash,),
+            )
+            target = cursor.fetchone()
+            conn.close()
+
+            if not initiator:
+                log_connection_attempt(
+                    initiator_hash, target_hash, False, "Initiator not found"
+                )
+                return jsonify({"error": "Initiator not found"}), 404
+
+            if not target:
+                log_connection_attempt(
+                    initiator_hash, target_hash, False, "Target user not found"
+                )
+                return jsonify({"error": "Target user not found"}), 404
+
+
+            if target_hash not in user_listening_ports:
+                log_connection_attempt(
+                    initiator_hash, target_hash, False, "Target user offline"
+                )
+                return jsonify({"error": "Target user is not online"}), 404
+
+            target_port = user_listening_ports[target_hash]["port"]
+
+
+            user_connection_counts[initiator_hash] = (
+                user_connection_counts.get(initiator_hash, 0) + 1
+            )
+            user_connection_counts[target_hash] = (
+                user_connection_counts.get(target_hash, 0) + 1
+            )
+
+
+            connection_info = {
+                "status": "connection_ready",
+                "initiator_peer_id": initiator["peer_id"],
+                "initiator_public_key": initiator["public_key"],
+                "Onion": initiator_ip,
+                "target_peer_id": target["peer_id"],
+                "target_public_key": target["public_key"],
+                "target_listening_port": target_port,
+                "timestamp": current_time,
+                "connection_id": f"{initiator_hash[:8]}_{target_hash[:8]}_{int(current_time)}",
+            }
+
+            log_connection_attempt(initiator_hash, target_hash, True, None)
+            print(
+                f"[SERVER] Connection ready: {initiator_hash[:16]}... -> {target_hash[:16]}... on port {target_port}"
+            )
+
+            return jsonify(connection_info)
+
+    except Exception as e:
+        print(f"[SERVER] Connection request error: {e}")
+        log_connection_attempt(
+            initiator_hash if "initiator_hash" in locals() else "unknown",
+            target_hash if "target_hash" in locals() else "unknown",
+            False,
+            str(e),
+        )
+        return jsonify({"error": "Connection request failed"}), 500
 
 @app.route("/request_connection", methods=["POST"])
 def request_connection():

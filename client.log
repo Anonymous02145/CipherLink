@@ -1209,3 +1209,19 @@ Shutting down gracefully...
 Shutting down gracefully...
 2025-10-17 19:59:03,456 [INFO] Error while receiving a control message (SocketClosed): empty socket content
 2025-10-17 19:59:03,527 [INFO] Client shut down successfully
+2025-10-17 20:01:35,452 [INFO] Starting CipherLink client...
+2025-10-17 20:01:35,452 [INFO] Checking configuration...
+2025-10-17 20:01:35,454 [INFO] Mode: Public
+2025-10-17 20:01:35,454 [INFO] Running in Public mode
+2025-10-17 20:01:35,454 [INFO] ------------------------------------------------------------
+2025-10-17 20:01:43,519 [DEBUG] System call: tor --version (runtime: 0.02)
+2025-10-17 20:01:55,655 [DEBUG] GETCONF __owningcontrollerprocess (runtime: 0.0006)
+2025-10-17 20:01:55,662 [DEBUG] RESETCONF __OwningControllerProcess (runtime: 0.0062)
+2025-10-17 20:01:55,872 [DEBUG] GETINFO version (runtime: 0.0008)
+2025-10-17 20:01:55,873 [DEBUG] GETCONF hiddenservicesinglehopmode (runtime: 0.0007)
+2025-10-17 20:02:00,643 [INFO] Secure client active on port 8080
+2025-10-17 20:02:30,396 [WARNING] Failed to establish connection
+2025-10-18 08:13:04,538 [INFO] 
+Shutting down gracefully...
+2025-10-18 08:13:04,722 [INFO] Error while receiving a control message (SocketClosed): empty socket content
+2025-10-18 08:13:04,791 [INFO] Client shut down successfully

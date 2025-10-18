@@ -570,114 +570,139 @@ class AnonymousClient:
             return False
 
     def handle_incoming_connection(self, client_sock, addr):
-       connection_id = f"recv_{addr[0]}_{addr[1]}_{int(time.time())}"
-       peer_username = "Unknown"
+        connection_id = f"recv_{addr[0]}_{addr[1]}_{int(time.time())}"
+        peer_username = "Unknown"
 
-       try:
-           client_sock.settimeout(15)
+        try:
+            client_sock.settimeout(15)
 
-           # Receive initiator's public key with better error handling
-           initiator_key_bytes = b""
-           while len(initiator_key_bytes) < 32:
-               chunk = client_sock.recv(32 - len(initiator_key_bytes))
-               if not chunk:
-                   print("[-] Failed to receive complete initiator public key")
-                   return
-               initiator_key_bytes += chunk
+            # Receive initiator's public key
+            initiator_key_bytes = b""
+            while len(initiator_key_bytes) < 32:
+                chunk = client_sock.recv(32 - len(initiator_key_bytes))
+                if not chunk:
+                    print("[-] Failed to receive complete initiator public key")
+                    client_sock.close()
+                    return
+                initiator_key_bytes += chunk
 
-           initiator_key = initiator_key_bytes.hex().strip().lower()
-           print(f"[DEBUG] Received initiator public key: {initiator_key[:16]}...")
+            initiator_key = initiator_key_bytes.hex().strip().lower()
+            print(f"[DEBUG] Received initiator public key: {initiator_key[:16]}...")
 
-           # CRITICAL: Verify we didn't receive our own key
-           if initiator_key == self.public_key_hex.lower():
-               print("[-] CRITICAL: Received our own public key from initiator")
-               return
+            # CRITICAL FIX: Check for self-connection IMMEDIATELY
+            if self.is_self_connection(initiator_key):
+                print("[-] REJECTED: Self-connection detected (same public key)")
+                print(f"[DEBUG] Our key:   {self.public_key_hex[:16]}...")
+                print(f"[DEBUG] Their key: {initiator_key[:16]}...")
+                client_sock.close()
+                return
 
-           # Send OUR public key (not the initiator's key!)
-           client_sock.send(self.public_key_bytes)
-           print(f"[DEBUG] Sent our public key: {self.public_key_hex[:16]}...")
+            # Send OUR public key
+            client_sock.sendall(self.public_key_bytes)
+            print(f"[DEBUG] Sent our public key: {self.public_key_hex[:16]}...")
 
-           # Receive username length and username
-           username_length_data = b""
-           while len(username_length_data) < 4:
-               chunk = client_sock.recv(4 - len(username_length_data))
-               if not chunk:
-                   print("[-] Failed to receive username length")
-                   return
-               username_length_data += chunk
+            # Receive username length and username
+            username_length_data = b""
+            while len(username_length_data) < 4:
+                chunk = client_sock.recv(4 - len(username_length_data))
+                if not chunk:
+                    print("[-] Failed to receive username length")
+                    client_sock.close()
+                    return
+                username_length_data += chunk
 
-           username_length = struct.unpack(">I", username_length_data)[0]
-           print(f"[DEBUG] Received username length: {username_length}")
-           if username_length > 100:
-               print(f"[-] Username too long: {username_length} bytes (max 100)")
-               return
+            username_length = struct.unpack(">I", username_length_data)[0]
+            print(f"[DEBUG] Received username length: {username_length}")
+            if username_length > 100:
+                print(f"[-] Username too long: {username_length} bytes (max 100)")
+                client_sock.close()
+                return
 
-           peer_username_data = b""
-           while len(peer_username_data) < username_length:
-               chunk = client_sock.recv(username_length - len(peer_username_data))
-               if not chunk:
-                   print("[-] Failed to receive complete username")
-                   return
-               peer_username_data += chunk
+            peer_username_data = b""
+            while len(peer_username_data) < username_length:
+                chunk = client_sock.recv(username_length - len(peer_username_data))
+                if not chunk:
+                    print("[-] Failed to receive complete username")
+                    client_sock.close()
+                    return
+                peer_username_data += chunk
 
-           peer_username = peer_username_data.decode()
-           print(f"[DEBUG] Received peer username: {peer_username}")
+            peer_username = peer_username_data.decode()
+            print(f"[DEBUG] Received peer username: {peer_username}")
 
-           # Send our username
-           username_bytes = self.username.encode()
-           client_sock.send(struct.pack(">I", len(username_bytes)))
-           client_sock.send(username_bytes)
+            # Additional check: Reject if username matches our own
+            if peer_username == self.username:
+                print(f"[-] REJECTED: Self-connection (same username: {peer_username})")
+                client_sock.close()
+                return
 
-           # Generate peer ID from initiator's key (not our key!)
-           digest = hashes.Hash(hashes.SHA256())
-           digest.update(initiator_key.encode())
-           peer_id = digest.finalize().hex()
+            # Send our username
+            username_bytes = self.username.encode()
+            client_sock.sendall(struct.pack(">I", len(username_bytes)))
+            client_sock.sendall(username_bytes)
 
-           if not self.verify_peer_public_key(
-               peer_id, initiator_key, peer_username
-           ):
-               print("[-] Peer verification failed")
-               return
+            # Generate peer ID from initiator's key
+            from cryptography.hazmat.primitives import hashes
+            digest = hashes.Hash(hashes.SHA256())
+            digest.update(initiator_key.encode())
+            peer_id = digest.finalize().hex()
 
-           # Derive shared secret using initiator's key
-           shared_secret = self.derive_shared_secret(initiator_key)
-           if not shared_secret:
-               print("[-] Failed to derive shared secret")
-               return
+            # Additional check: Don't connect to our own peer_id
+            if peer_id == self.peer_id:
+                print(f"[-] REJECTED: Self-connection (same peer_id)")
+                client_sock.close()
+                return
 
-           connection_id = f"recv_{peer_username}"
-           print(f"[+] Establishing Tor connection {connection_id} with shared key {shared_secret.hex()[:16]}...")
+            if not self.verify_peer_public_key(
+                peer_id, initiator_key, peer_username
+            ):
+                print("[-] Peer verification failed")
+                client_sock.close()
+                return
 
-           with self.lock:
-               self.active_connections[connection_id] = {
-                   "socket": client_sock,
-                   "aes_key": shared_secret,
-                   "role": "recipient",
-                   "peer_info": {
-                       "username": peer_username,
-                       "peer_id": peer_id,
-                       "public_key": initiator_key,
-                       "address": addr,
-                   },
-                   "established": time.time(),
-                   "verified": True,
-                   "e2e_enabled": True,
-                   "tor_routed": True
-               }
+            # Derive shared secret using initiator's key
+            shared_secret = self.derive_shared_secret(initiator_key)
+            if not shared_secret:
+                print("[-] Failed to derive shared secret")
+                client_sock.close()
+                return
 
-           print(f"[+] Tor connection established successfully with {peer_username}")
-           self._secure_message_loop(client_sock, shared_secret, connection_id)
+            connection_id = f"recv_{peer_username}"
+            print(f"[+] Establishing Tor connection {connection_id} with shared key {shared_secret.hex()[:16]}...")
 
-       except Exception as e:
-           print(f"[-] Incoming Tor connection error: {e}")
-       finally:
-           with self.lock:
-               if connection_id in self.active_connections:
-                   del self.active_connections[connection_id]
-           try:
-               client_sock.close()
-           except:
-               pass
+            with self.lock:
+                self.active_connections[connection_id] = {
+                    "socket": client_sock,
+                    "aes_key": shared_secret,
+                    "role": "recipient",
+                    "peer_info": {
+                        "username": peer_username,
+                        "peer_id": peer_id,
+                        "public_key": initiator_key,
+                        "address": addr,
+                    },
+                    "established": time.time(),
+                    "verified": True,
+                    "e2e_enabled": True,
+                    "tor_routed": True
+                }
+
+            print(f"[+] Tor connection established successfully with {peer_username}")
+            self._secure_message_loop(client_sock, shared_secret, connection_id)
+
+        except Exception as e:
+            print(f"[-] Incoming Tor connection error: {e}")
+            import traceback
+            traceback.print_exc()
+        finally:
+            with self.lock:
+                if connection_id in self.active_connections:
+                    del self.active_connections[connection_id]
+            try:
+                client_sock.close()
+            except:
+                pass
+
 
     def _secure_message_loop(self, sock, aes_key, connection_id):
         try:
@@ -1019,242 +1044,237 @@ class AnonymousClient:
             return None
 
     def connect_to_peer_direct(self, target_peer_id, target_identity_hash):
-       try:
-           if not self.ensure_valid_session():
-               print("[-] Session validation failed")
-               return None
+        try:
+            if not self.ensure_valid_session():
+                print("[-] Session validation failed")
+                return None
 
-           existing_conn = None
-           with self.lock:
-               for conn_id, conn_info in self.active_connections.items():
-                   if conn_info["peer_info"]["peer_id"] == target_peer_id:
-                       existing_conn = conn_id
-                       break
+            # Check if trying to connect to ourselves
+            if target_peer_id == self.peer_id:
+                print("[-] REJECTED: Cannot connect to self (same peer_id)")
+                return None
 
-           if existing_conn:
-               print(f"[+] Using existing Tor connection: {existing_conn}")
-               return existing_conn
+            existing_conn = None
+            with self.lock:
+                for conn_id, conn_info in self.active_connections.items():
+                    if conn_info["peer_info"]["peer_id"] == target_peer_id:
+                        existing_conn = conn_id
+                        break
 
-           # Get target's actual public key from peer directory FIRST
-           with self.lock:
-               if target_peer_id in self.peer_directory:
-                   actual_target_public_key = self.peer_directory[target_peer_id].get("public_key")
-               else:
-                   actual_target_public_key = None
+            if existing_conn:
+                print(f"[+] Using existing Tor connection: {existing_conn}")
+                return existing_conn
 
-           connection_info = self.request_connection(target_identity_hash)
-           if not connection_info:
-               print("[-] Server connection request failed")
-               return None
+            # Get target's actual public key from peer directory FIRST
+            with self.lock:
+                if target_peer_id in self.peer_directory:
+                    actual_target_public_key = self.peer_directory[target_peer_id].get("public_key")
+                else:
+                    actual_target_public_key = None
 
-           target_port = connection_info.get("target_listening_port")
-           target_address = connection_info.get("onion_address")
-           if not target_address:
-               target_address = connection_info.get("IP", "127.0.0.1")
-           server_provided_key = connection_info.get("target_public_key")
+            connection_info = self.request_connection(target_identity_hash)
+            if not connection_info:
+                print("[-] Server connection request failed")
+                return None
 
-           if not target_port or not server_provided_key:
-               print("[-] Missing connection info from server")
-               return None
+            target_port = connection_info.get("target_listening_port")
+            target_address = connection_info.get("IP")
+            if not target_address:
+                target_address = connection_info.get("IP", "127.0.0.1")
+            server_provided_key = connection_info.get("target_public_key")
 
-           username = self.peer_directory.get(target_peer_id, {}).get(
-               "username", f"User_{target_peer_id[:8]}"
-           )
+            if not target_port or not server_provided_key:
+                print("[-] Missing connection info from server")
+                return None
 
-           is_onion = target_address.endswith('.onion')
+            # CRITICAL CHECK: Don't connect if server gave us our own key
+            if self.is_self_connection(server_provided_key):
+                print("[-] REJECTED: Server provided our own public key")
+                print("[!] This means you're trying to connect to yourself")
+                return None
 
-           if is_onion:
-               print(f"[+] Connecting to {username} via Tor at {target_address}:80")
-               sock = self.tor_wrapper.connect_to_onion(target_address, 80, timeout=30)
-           else:
-               print(f"[+] Connecting to {username} via Tor at {target_address}:{target_port}")
-               sock = self.tor_wrapper.connect_to_ip(target_address, target_port, timeout=30)
+            # Check if onion address is our own
+            if target_address == self.onion_address:
+                print("[-] REJECTED: Trying to connect to our own onion address")
+                return None
 
-           if not sock:
-               print("[-] Failed to establish Tor connection")
-               return None
+            username = self.peer_directory.get(target_peer_id, {}).get(
+                "username", f"User_{target_peer_id[:8]}"
+            )
 
-           # Send OUR public key first
-           sock.send(self.to_send)
-           print(f"[DEBUG] Sent our public key: {self.public_key_hex[:16]}...")
+            is_onion = target_address.endswith('.onion')
 
-           # Receive PEER's public key
-           try:
-               target_key = sock.recv(32)
-               print("Received target public key", target_key)
-               if len(target_key) != 32:
-                   print("[-] Failed to receive valid target public key")
-                   # sock.close()
-                   # return None
+            if is_onion:
+                print(f"[+] Connecting to {username} via Tor at {target_address}:80")
+                sock = self.tor_wrapper.connect_to_onion(target_address, 80, timeout=30)
+            else:
+                print(f"[+] Connecting to {username} via Tor at {target_address}:{target_port}")
+                sock = self.tor_wrapper.connect_to_ip(target_address, target_port, timeout=30)
 
-               peer_sent_key = target_key.hex().strip().lower()
-               print(f"[DEBUG] Received peer public key: {peer_sent_key[:16]}...")
+            if not sock:
+                print("[-] Failed to establish Tor connection")
+                return None
 
-           except socket.timeout:
-               print("[-] Timeout receiving peer public key")
-               sock.close()
-               return None
+            # Send OUR public key first
+            sock.sendall(self.public_key_bytes)
+            print(f"[DEBUG] Sent our public key: {self.public_key_hex[:16]}...")
 
-           # Send our username
-           username_bytes = self.username.encode()
-           try:
-               sock.send(struct.pack(">I", len(username_bytes)))
-               sock.send(username_bytes)
-           except Exception as e:
-               print(f"[-] Failed to send username: {e}")
-               sock.close()
-               return None
+            # Receive PEER's public key
+            try:
+                target_key = b""
+                while len(target_key) < 32:
+                    chunk = sock.recv(32 - len(target_key))
+                    if not chunk:
+                        print("[-] Failed to receive peer public key")
+                        sock.close()
+                        return None
+                    target_key += chunk
 
-           # Receive peer's username
-           try:
-               username_length_data = b""
-               while len(username_length_data) < 4:
-                   chunk = sock.recv(4 - len(username_length_data))
-                   if not chunk:
-                       print("[-] Failed to receive username length")
-                       sock.close()
-                       return None
-                   username_length_data += chunk
+                peer_sent_key = target_key.hex().strip().lower()
+                print(f"[DEBUG] Received peer public key: {peer_sent_key[:16]}...")
 
-               username_length = struct.unpack(">I", username_length_data)[0]
-               if username_length > 100:
-                   print("[-] Username too long")
-                   sock.close()
-                   return None
+            except socket.timeout:
+                print("[-] Timeout receiving peer public key")
+                sock.close()
+                return None
 
-               received_username_bytes = b""
-               while len(received_username_bytes) < username_length:
-                   chunk = sock.recv(username_length - len(received_username_bytes))
-                   if not chunk:
-                       print("[-] Failed to receive complete username")
-                       sock.close()
-                       return None
-                   received_username_bytes += chunk
+            # CRITICAL CHECK: Verify we didn't receive our own key back
+            if self.is_self_connection(peer_sent_key):
+                print("[-] REJECTED: Received our own public key from peer")
+                print("[!] This confirms you're connecting to yourself through Tor")
+                sock.close()
+                return None
 
-               received_username = received_username_bytes.decode()
-               print(f"[DEBUG] Received peer username: {received_username}")
+            # Send our username
+            username_bytes = self.username.encode()
+            try:
+                sock.sendall(struct.pack(">I", len(username_bytes)))
+                sock.sendall(username_bytes)
+            except Exception as e:
+                print(f"[-] Failed to send username: {e}")
+                sock.close()
+                return None
 
-           except Exception as e:
-               print(f"[-] Failed to receive peer username: {e}")
-               sock.close()
-               return None
+            # Receive peer's username
+            try:
+                username_length_data = b""
+                while len(username_length_data) < 4:
+                    chunk = sock.recv(4 - len(username_length_data))
+                    if not chunk:
+                        print("[-] Failed to receive username length")
+                        sock.close()
+                        return None
+                    username_length_data += chunk
 
-           # Normalize keys for comparison
-           server_provided_key = server_provided_key.strip().lower()
+                username_length = struct.unpack(">I", username_length_data)[0]
+                if username_length > 100:
+                    print("[-] Username too long")
+                    sock.close()
+                    return None
 
-           # CRITICAL: Verify we didn't receive our own key back
-           if target_key.hex() != server_provided_key:
-               print(f"[-] Key mismatch with server info")
-               print(f"    Server provided: {target_key[:16]}...")
-               print(f"    Peer sent: {target_key.hex()[:16]}...")
-               try:
-                   option = str(input("Do you want to continue without key verification? (y/n) (recomended: do not, potential MITM): "))
-                   if option.lower() == 'y':
-                       print("[+] Continuing without key verification")
-                   elif option.lower() == 'n':
-                       print("[-] Key verification failed")
-                       sock.close()
-                       return None
-                   else:
-                       print("Invalid option, defaulting to no")
-                       print("\n")
-                       print("Connection closed")
-                       sock.close()
-                       return None
-               except Exception as e:
-                   print(f"[-] Failed to get user input: {e}")
-                   sock.close()
-                   return None
-               return None
+                received_username_bytes = b""
+                while len(received_username_bytes) < username_length:
+                    chunk = sock.recv(username_length - len(received_username_bytes))
+                    if not chunk:
+                        print("[-] Failed to receive complete username")
+                        sock.close()
+                        return None
+                    received_username_bytes += chunk
 
-           # VALIDATION: Check if we have the actual target public key from discovery
-           if actual_target_public_key:
-               actual_target_public_key = actual_target_public_key.strip().lower()
-               if peer_sent_key != actual_target_public_key:
-                   print(f"[-] CRITICAL: Key mismatch with discovered peer key")
-                   print(f"    Discovered: {actual_target_public_key[:16]}...")
-                   print(f"    Peer sent: {peer_sent_key[:16]}...")
-                   sock.close()
-                   return None
-               print(f"[+] Key validated against discovered peer directory")
-           else:
-               # If no prior key, verify against server-provided key
-               if target_key.hex() != server_provided_key:
-                   print(f"[-] CRITICAL: Key mismatch with server-provided key")
-                   print(f"    Server provided: {server_provided_key[:16]}...")
-                   print(f"    Peer sent: {peer_sent_key[:16]}...")
-                   try:
-                       option = str(input("Do you want to continue without key verification? (y/n) (recomended: do not, potential MITM): "))
-                       if option.lower() == 'y':
-                           print("[+] Continuing without key verification")
-                       elif option.lower() == 'n':
-                           print("[-] Key verification failed")
-                           sock.close()
-                           return None
-                       else:
-                           print("Invalid option, defaulting to no")
-                           print("\n")
-                           print("Connection closed")
-                           sock.close()
-                           return None
-                   except Exception as e:
-                       print(f"[-] Failed to get user input: {e}")
-                       sock.close()
-                       return None
-                   sock.close()
-                   return None
-               print(f"[+] Key validated against server-provided key")
+                received_username = received_username_bytes.decode()
+                print(f"[DEBUG] Received peer username: {received_username}")
 
-           if not self.verify_peer_public_key(
-               target_peer_id, peer_sent_key, received_username
-           ):
-               print("[-] Peer verification failed")
-               sock.close()
-               return None
+            except Exception as e:
+                print(f"[-] Failed to receive peer username: {e}")
+                sock.close()
+                return None
 
-           shared_secret = self.derive_shared_secret(peer_sent_key)
-           if not shared_secret:
-               print("[-] Failed to derive shared secret")
-               sock.close()
-               return None
+            # Final username check
+            if received_username == self.username:
+                print(f"[-] REJECTED: Peer has same username as us ({received_username})")
+                sock.close()
+                return None
 
-           connection_id = f"init_{received_username}"
-           print(f"[+] Establishing Tor connection {connection_id} with shared key {shared_secret.hex()[:16]}...")
+            # Normalize keys for comparison
+            server_provided_key = server_provided_key.strip().lower()
 
-           with self.lock:
-               self.active_connections[connection_id] = {
-                   "socket": sock,
-                   "aes_key": shared_secret,
-                   "role": "initiator",
-                   "peer_info": {
-                       "username": received_username,
-                       "peer_id": target_peer_id,
-                       "public_key": peer_sent_key,
-                       "address": (target_address, target_port),
-                   },
-                   "established": time.time(),
-                   "verified": True,
-                   "e2e_enabled": True,
-                   "tor_routed": True
-               }
+            # Verify key matches server info
+            if peer_sent_key != server_provided_key:
+                print(f"[-] Key mismatch with server info")
+                print(f"    Server provided: {server_provided_key[:16]}...")
+                print(f"    Peer sent: {peer_sent_key[:16]}...")
+                sock.close()
+                return None
 
-           thread = threading.Thread(
-               target=self._secure_message_loop,
-               args=(sock, shared_secret, connection_id),
-               daemon=True
-           )
-           thread.start()
+            if not self.verify_peer_public_key(
+                target_peer_id, peer_sent_key, received_username
+            ):
+                print("[-] Peer verification failed")
+                sock.close()
+                return None
 
-           print(f"[+] Tor connection established successfully with {received_username}")
-           return connection_id
+            shared_secret = self.derive_shared_secret(peer_sent_key)
+            if not shared_secret:
+                print("[-] Failed to derive shared secret")
+                sock.close()
+                return None
 
-       except Exception as e:
-           print(f"[-] Tor connection error: {e}")
-           try:
-               sock.close()
-           except:
-               pass
-           return None
+            connection_id = f"init_{received_username}"
+            print(f"[+] Establishing Tor connection {connection_id} with shared key {shared_secret.hex()[:16]}...")
+
+            with self.lock:
+                self.active_connections[connection_id] = {
+                    "socket": sock,
+                    "aes_key": shared_secret,
+                    "role": "initiator",
+                    "peer_info": {
+                        "username": received_username,
+                        "peer_id": target_peer_id,
+                        "public_key": peer_sent_key,
+                        "address": (target_address, target_port),
+                    },
+                    "established": time.time(),
+                    "verified": True,
+                    "e2e_enabled": True,
+                    "tor_routed": True
+                }
+
+            import threading
+            thread = threading.Thread(
+                target=self._secure_message_loop,
+                args=(sock, shared_secret, connection_id),
+                daemon=True
+            )
+            thread.start()
+
+            print(f"[+] Tor connection established successfully with {received_username}")
+            return connection_id
+
+        except Exception as e:
+            print(f"[-] Tor connection error: {e}")
+            import traceback
+            traceback.print_exc()
+            try:
+                sock.close()
+            except:
+                pass
+            return None
+    def debug_connection_info(self):
+        """Debug helper to print connection details"""
+        print("\n" + "="*60)
+        print("DEBUG: Connection Information")
+        print("="*60)
+        print(f"Our Peer ID:      {self.peer_id[:32]}...")
+        print(f"Our Public Key:   {self.public_key_hex[:32]}...")
+        print(f"Our Username:     {self.username}")
+        print(f"Our Onion:        {self.onion_address}")
+        print(f"Listening Port:   {self.listening_port}")
+        print("="*60 + "\n")
+
+
+    def is_self_connection(self, peer_key_hex):
+        """Check if the peer key is our own key"""
+        return peer_key_hex.strip().lower() == self.public_key_hex.strip().lower()
 
     def get_connection_by_username(self, username: str) -> Optional[str]:
         try:
